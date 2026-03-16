@@ -11,14 +11,6 @@ inicio:
 	LDI R16, 222
 	MOV R0,R16 //copia R16 para R0
 
-	LDI R16, 100
-	MOV R1, R16 //copia R1 para dividir por centena
-
-	LDI R16, 10
-	MOV R2, R16 //copia R2 para dividir por dezena
-	
-	LDI R16, 1
-	MOV R3, R16 //copia R3 para dividir por unidade
 	RCALL dividir
 loop:
 	RJMP loop
