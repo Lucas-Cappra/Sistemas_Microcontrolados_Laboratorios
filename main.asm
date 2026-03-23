@@ -15,7 +15,7 @@ convert_BCD:
 
   div_centena:
     CPI R16, 0x64
-    BRLO div_dezena //Desvia se R7<R1
+    BRLO div_dezena ;Desvia se R7<R1
     SUBI R16, 0x64
     INC R4
     rjmp div_centena
@@ -26,14 +26,14 @@ convert_BCD:
     BRLO div_unidade
     SUBI R16, 0x0A
     INC R5
-    rjmp div_dezena //Desvia se R7<R1
+    rjmp div_dezena ;Desvia se R7<R1
 
   div_unidade:
     CPI R16, 0x01
     BRLO div_sair
     SUBI R16, 0x01
     INC R6
-    rjmp div_unidade //Desvia se R7<R1
+    rjmp div_unidade ;Desvia se R7<R1
   //div_unidade:
 
     
@@ -55,7 +55,7 @@ exibir_pov:
 
     centena_zero:
 
-    mov r16, r4         // Pega o valor 0-9 da Centena
+    mov r16, r4         ; Pega o valor 0-9 da Centena
     lsl r16
     out PORTD, r16
     rcall delay_mili
@@ -74,7 +74,7 @@ exibir_pov:
 
     dezena_zero:
 
-    mov r16, r5         // Pega o valor 0-9 da Dezena
+    mov r16, r5         ; Pega o valor 0-9 da Dezena
     lsl r16
     out PORTD, r16
     rcall delay_mili
@@ -135,7 +135,7 @@ fim_inc:
 
 .cseg
 lista:
-    .db 10, 160, 170, 180, 190, 200, 210, 220, 230, 240
+    .db 10, 16, 59, 81, 90, 100, 140, 220, 230, 240
 fim_lista:
 
 
