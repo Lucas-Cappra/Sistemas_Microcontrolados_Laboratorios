@@ -142,8 +142,8 @@ fim_lista:
 main:
     
     ; Definindo PORTD como saída
-    ldi r16, 0xFE
-    out DDRD, r16 ; 1111 1110
+    ldi r16, 0x1E
+    out DDRD, r16 ; 0001 1110
 
     sbi DDRB, 0 ; PB0 (Pino 8) Saída
     sbi DDRB, 1 ; PB0 (Pino 8) Saída
