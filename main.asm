@@ -1,13 +1,10 @@
+.include "m328pdef.inc"
+.org 0x0000           ; A proxima instruncao em 0x0000
+
 rjmp main
 
 
-
-
-.cseg
-
-
 convert_BCD:
-
 
   dividir:
     CLR R4 //limpa R4
@@ -54,7 +51,7 @@ exibir_pov:
     
     cp r4, r16
     breq centena_zero
-    sbi   PORTB, 2
+    cbi   PORTB, 2
 
     centena_zero:
 
@@ -62,7 +59,7 @@ exibir_pov:
     lsl r16
     out PORTD, r16
     rcall delay_mili
-    cbi   PORTB, 2 
+    sbi   PORTB, 2 
 
 
     ; Dezena
@@ -73,7 +70,7 @@ exibir_pov:
     or r17, r4
     cp r17, r16
     breq dezena_zero
-    sbi   PORTB, 1  
+    cbi   PORTB, 1  
 
     dezena_zero:
 
@@ -81,19 +78,19 @@ exibir_pov:
     lsl r16
     out PORTD, r16
     rcall delay_mili
-    cbi   PORTB, 1    
+    sbi   PORTB, 1    
 
 
     ; Unidade
     ldi   r16, 0         ; Limpa r16 antes de carregar
     out   PORTD, r16     ; Limpa o rastro do digito anterior
 
-    sbi   PORTB, 0    
+    cbi   PORTB, 0    
     lsl r16
 
     out PORTD, r16
     rcall delay_mili
-    cbi   PORTB, 0      
+    sbi   PORTB, 0      
     
     ret
 
@@ -119,8 +116,8 @@ delay_loop_mili:
 inc_pointer:
     adiw r26, 1             ; Incrementa o ponteiro X (r27:r26)
 
-    ldi r18, low(fim_lista*2) ; Carrega o byte baixo do endereço de fim
-    ldi r19, high(fim_lista*2) ; Carrega o byte alto do endereço de fim
+    ldi r18, low(fim_lista) ; Carrega o byte baixo do endereço de fim
+    ldi r19, high(fim_lista) ; Carrega o byte alto do endereço de fim
 
     cp  r26, r18            ; Compara a parte baixa
     cpc r27, r19            ; Compara a parte alta com o Carry do anterior
@@ -129,14 +126,14 @@ inc_pointer:
     brne fim_inc            ; Se NÃO for igual ao fim, sai da função
     
     ; --- ELSE (Reset para o início da lista, Exibição Rotativa) ---
-    ldi r26, low(lista*2)     
-    ldi r27, high(lista*2)     
+    ldi r26, low(lista)     
+    ldi r27, high(lista)     
 
 fim_inc:
     ret
 
 
-//.section .progmem
+.cseg
 lista:
     .db 10, 160, 170, 180, 190, 200, 210, 220, 230, 240
 fim_lista:
@@ -153,8 +150,8 @@ main:
     sbi DDRB, 2 ; PB0 (Pino 8) Saída
 
    ; Elemento Inicial da Lista L(0)
-    ldi r30, low(lista*2)
-    ldi r31, high(lista*2)
+    ldi r30, low(lista)
+    ldi r31, high(lista)
     
     ; Registrador X para transferência entre FLASH e RAM
     mov r26, r30
@@ -171,7 +168,6 @@ MAIN_LOOP:
     ; Converte o numero em r20 para BCD
     rcall convert_BCD   
     
-
     ; Loop longo(~1 s)
     ldi r25, 14
 loop_pov:
