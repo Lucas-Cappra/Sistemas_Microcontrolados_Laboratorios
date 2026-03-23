@@ -1,196 +1,187 @@
-
 rjmp main
 
 
 
 
-DELAY_1_SEG:
-    ; Reseta o contador
-    ldi r17, 0
-    sts TCNT1H, r17      // Usa STS porque o Timer1 está longe na memória
-    sts TCNT1L, r17
-
-    ; Carrega o pre-scaler (1024)	
-    ; CS12 representa a posição 2, e CS10 a posição 0.
-    ; O deslocamento de bits é feito 2 e 0 vezes para a ESQUERDA.
-    ldi r17, (1<<CS12) | (1<<CS10) 
-    sts TCCR1B, r17
-
-WAIT_TIMER:
-    ; Lê o registrador de flags do timer
-    in r17, TIFR1
-
-    rcall exibir_pov
-
-    ; Compara se o valor em r16 estourou (TOV1 = 1) e pula pra proxima linha
-    sbrs r17, TOV1
-
-    ; Volta pra flag WAIT_TIMER
-    rjmp WAIT_TIMER
-
-    ; Se estourou, pula pra essa linha e desligamos o timer
-    ldi r17, 0
-    sts TCCR1B, r17
-
-    ; Limpa a flag de estouro
-    ldi r17, (1<<TOV1)
-    out TIFR1, r17
-    
-    ; Retorna para o loop principal
-    ret
-
-
-
-fim_funcao:
-
-    ret
+.cseg
 
 
 convert_BCD:
-
-    inicio:
-
-	  //LDI ZL, r24
-    MOV R0, R16 //copia R16 para R0
-
-    RCALL dividir
 
 
   dividir:
     CLR R4 //limpa R4
     CLR R5 //limpa R5
     CLR R6 //limpa R6
-    MOV R16, R0 //preserva R0
+    MOV R16, R20 //preserva R0
+    
 
   div_centena:
+    CPI R16, 0x64
+    BRLO div_dezena //Desvia se R7<R1
     SUBI R16, 0x64
     INC R4
-    CPI R16,0x64
-    BRGE div_centena
-    BRLO div_dezena //Desvia se R7<R1
+    rjmp div_centena
+    
     
   div_dezena:
+    CPI R16, 0x0A
+    BRLO div_unidade
     SUBI R16, 0x0A
     INC R5
-    CPI R16, 0x0A
-    BRGE div_dezena
-    BRLO div_unidade //Desvia se R7<R1
+    rjmp div_dezena //Desvia se R7<R1
 
   div_unidade:
+    CPI R16, 0x01
+    BRLO div_sair
     SUBI R16, 0x01
     INC R6
-    CPI R16, 0x0A
-    BRGE div_unidade
-    BRLO div_sair //Desvia se R7<R1
+    rjmp div_unidade //Desvia se R7<R1
+  //div_unidade:
 
+    
   div_sair:
-    MOV R8, R7
+    //MOV R6, R16
     RET //retorna
     //R4, R5, R6 retorna os valores de Dezena, Centena e Unidade respectivamente.
 
 
+exibir_pov:
+
+
+    ldi   r16, 0         ; Limpa r16 antes de carregar
+    out   PORTD, r16     ; Limpa o rastro do digito anterior
+    
+    cp r4, r16
+    breq centena_zero
+    sbi   PORTB, 2
+
+    centena_zero:
+
+    mov r16, r4         // Pega o valor 0-9 da Centena
+    lsl r16
+    out PORTD, r16
+    rcall delay_mili
+    cbi   PORTB, 2 
+
+
+    ; Dezena
+    ldi   r16, 0         ; Limpa r16 antes de carregar
+    out   PORTD, r16     ; Limpa o rastro do digito anterior
+
+    mov r17, r5
+    or r17, r4
+    cp r17, r16
+    breq dezena_zero
+    sbi   PORTB, 1  
+
+    dezena_zero:
+
+    mov r16, r5         // Pega o valor 0-9 da Dezena
+    lsl r16
+    out PORTD, r16
+    rcall delay_mili
+    cbi   PORTB, 1    
+
+
+    ; Unidade
+    ldi   r16, 0         ; Limpa r16 antes de carregar
+    out   PORTD, r16     ; Limpa o rastro do digito anterior
+
+    sbi   PORTB, 0    
+    lsl r16
+
+    out PORTD, r16
+    rcall delay_mili
+    cbi   PORTB, 0      
+    
+    ret
+
+
+
+delay_mili:
+   clr     r21         
+   ldi     r22, 10
+   ldi     r23, 2 
+
+
+delay_loop_mili:
+    dec     r22         
+    brne    delay_loop_mili  
+    dec     r21         
+    brne    delay_loop_mili  
+    dec     r23         
+    brne    delay_loop_mili  
+    ret
+
 
 
 inc_pointer:
-    adiw ZL, 2 // Incrementa o ponteiro Z
+    adiw r26, 1             ; Incrementa o ponteiro X (r27:r26)
+
+    ldi r18, low(fim_lista*2) ; Carrega o byte baixo do endereÃ§o de fim
+    ldi r19, high(fim_lista*2) ; Carrega o byte alto do endereÃ§o de fim
+
+    cp  r26, r18            ; Compara a parte baixa
+    cpc r27, r19            ; Compara a parte alta com o Carry do anterior
     
-    // Verifica se passou do 10º elemento (lista + 10)
-    // Se sua lista for .dw (2 bytes cada), mude para + 20
-    cpi ZL, low((lista<<1) + 10)
-    ldi r17, high((lista<<1) + 10)
-    cpc ZH, r17
-    brne fim_inc
+    ; IF
+    brne fim_inc            ; Se NÃƒO for igual ao fim, sai da funÃ§Ã£o
     
-    // Reset para o início se chegar ao fim
-    ldi ZH, high(lista<<1)
-    ldi ZL, low(lista<<1)
+    ; --- ELSE (Reset para o inÃ­cio da lista, ExibiÃ§Ã£o Rotativa) ---
+    ldi r26, low(lista*2)     
+    ldi r27, high(lista*2)     
+
 fim_inc:
     ret
 
 
-
-exibir_pov:
-    
-    ; Centena 
-    sbi   PORTB, 0
-    ldi   r19, 1
-    
-    ; Carregar valor da Dezena nas Portas D
-    SWAP   r5
-    out PORTD, r5 
-
-    rcall delay  
-    cbi   PORTB, 0 
-
-
-    ; Dezena
-    sbi   PORTD, 3  
-    ldi   r19, 1
-    
-    SWAP   r4
-    out PORTD, r4 
-
-
-    rcall delay
-    cbi   PORTD, 3     
-
-
-    ; Unidade
-    sbi   PORTD, 2     
-    ldi   r19, 1
-    SWAP   r6
-    out PORTD, r6 
-
-
-    rcall delay
-    cbi   PORTD, 2      
-    
-    ret
-
-
-delay:
-   clr     r17         
-   clr     r18 
-
-
-delay_loop:
-   dec     r18         
-   brne    delay_loop  
-   dec     r17         
-   brne    delay_loop  
-   dec     r19         
-   brne    delay_loop  
-   ret
-
-
+//.section .progmem
 lista:
-    .dw 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 ; Seus 10 valores
+    .db 10, 160, 170, 180, 190, 200, 210, 220, 230, 240
+fim_lista:
 
 
 main:
+    
+    ; Definindo PORTD como saÃ­da
+    ldi r16, 0xFE
+    out DDRD, r16 ; 1111 1110
 
-    ; Pinos 7, 6, 5, 4, 3 E 2 para como saídas
-    ldi r16,  (1<<DDD7) | (1<<DDD6) | (1<<DDD5) | (1<<DDD4) | (1<<DDD3) | (1<<DDD2) 
-    out DDRD, r16
+    sbi DDRB, 0 ; PB0 (Pino 8) SaÃ­da
+    sbi DDRB, 1 ; PB0 (Pino 8) SaÃ­da
+    sbi DDRB, 2 ; PB0 (Pino 8) SaÃ­da
 
-    sbi DDRB, 0 ; PB0 (Pino 8) Saída
-
-    ldi ZH, high(lista<<1)
-    ldi ZL, low(lista<<1)
-
-
-
+   ; Elemento Inicial da Lista L(0)
+    ldi r30, low(lista*2)
+    ldi r31, high(lista*2)
+    
+    ; Registrador X para transferÃªncia entre FLASH e RAM
+    mov r26, r30
+    mov r27, r31
 
 MAIN_LOOP:
+    ; Copia o endereÃ§o atual do X para o Z para poder usar o LPM
+    mov r30, r26
+    mov r31, r27
 
-    lpm r16, Z           // Pega o valor atual da lista
-    rcall convert_BCD    // Prepara R4, R5, R6
+    ; Busca o valor atual da Lista(L(0), L(1), ...)
+    lpm r20, Z          
 
-    rcall DELAY_1_SEG
-    rcall inc_pointer
+    ; Converte o numero em r20 para BCD
+    rcall convert_BCD   
+    
 
-    rjmp MAIN_LOOP       ; Loop infinito
-
-
+    ; Loop longo(~1 s)
+    ldi r25, 14
+loop_pov:
+    rcall exibir_pov    ;  Exibe CDU, usando multiplexaÃ§Ã£o rÃ¡pida
+    dec r25
+    brne loop_pov
 
     
+    ; Incrementa o ponteiro da lista
+    rcall inc_pointer
+
+
+    rjmp MAIN_LOOP
