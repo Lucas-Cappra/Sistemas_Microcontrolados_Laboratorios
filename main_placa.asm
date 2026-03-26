@@ -56,10 +56,11 @@ exibir_pov:
     centena_zero:
 
     mov r16, r4         ; Pega o valor 0-9 da Centena
-     r16
+    swap r16
     out PORTD, r16
-    rcall delay_mili
     sbi   PORTB, 0 
+    rcall delay_mili
+
 
 
     ; Dezena
@@ -75,10 +76,11 @@ exibir_pov:
     dezena_zero:
 
     mov r16, r5         ; Pega o valor 0-9 da Dezena
-     r16
+    swap r16
     out PORTD, r16
-    rcall delay_mili
     sbi   PORTD, 3    
+    rcall delay_mili
+
 
 
     ; Unidade
@@ -86,11 +88,12 @@ exibir_pov:
     out   PORTD, r16     ; Limpa o rastro do digito anterior
 
     cbi   PORTD, 2    
-     r16
+    swap r16
 
     out PORTD, r16
+    sbi   PORTD, 2   
     rcall delay_mili
-    sbi   PORTD, 2      
+   
     
     ret
 
