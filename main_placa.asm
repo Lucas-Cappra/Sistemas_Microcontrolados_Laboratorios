@@ -56,7 +56,7 @@ exibir_pov:
     centena_zero:
 
     mov r16, r4         ; Pega o valor 0-9 da Centena
-    lsl r16
+     r16
     out PORTD, r16
     rcall delay_mili
     sbi   PORTB, 0 
@@ -75,7 +75,7 @@ exibir_pov:
     dezena_zero:
 
     mov r16, r5         ; Pega o valor 0-9 da Dezena
-    lsl r16
+     r16
     out PORTD, r16
     rcall delay_mili
     sbi   PORTD, 3    
@@ -86,7 +86,7 @@ exibir_pov:
     out   PORTD, r16     ; Limpa o rastro do digito anterior
 
     cbi   PORTD, 2    
-    lsl r16
+     r16
 
     out PORTD, r16
     rcall delay_mili
@@ -242,7 +242,7 @@ exibir_pov:
     centena_zero:
 
     mov r16, r4         ; Pega o valor 0-9 da Centena
-    lsl r16
+    swap r16
     out PORTD, r16
     rcall delay_mili
     sbi   PORTB, 2 
@@ -261,7 +261,7 @@ exibir_pov:
     dezena_zero:
 
     mov r16, r5         ; Pega o valor 0-9 da Dezena
-    lsl r16
+    swap r16
     out PORTD, r16
     rcall delay_mili
     sbi   PORTB, 1    
@@ -272,7 +272,7 @@ exibir_pov:
     out   PORTD, r16     ; Limpa o rastro do digito anterior
 
     cbi   PORTB, 0    
-    lsl r16
+    swap r16
 
     out PORTD, r16
     rcall delay_mili
