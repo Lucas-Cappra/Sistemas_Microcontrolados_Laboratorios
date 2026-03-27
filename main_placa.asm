@@ -1,4 +1,6 @@
 .include "m328pdef.inc"
+
+.cseg
 .org 0x0000           ; A proxima instruncao em 0x0000
 
 rjmp main
@@ -7,10 +9,10 @@ rjmp main
 convert_BCD:
 
   dividir:
-    CLR R4 //limpa R4
-    CLR R5 //limpa R5
-    CLR R6 //limpa R6
-    MOV R16, R20 //preserva R0
+    CLR R4 ;limpa R4
+    CLR R5 ;limpa R5
+    CLR R6 ;limpa R6
+    MOV R16, R20 ;preserva R0
     
 
   div_centena:
@@ -34,65 +36,64 @@ convert_BCD:
     SUBI R16, 0x01
     INC R6
     rjmp div_unidade ;Desvia se R7<R1
-  //div_unidade:
+  ;div_unidade:
 
     
   div_sair:
-    //MOV R6, R16
-    RET //retorna
-    //R4, R5, R6 retorna os valores de Dezena, Centena e Unidade respectivamente.
+    ;MOV R6, R16
+    RET ;retorna
+    ;R4, R5, R6 retorna os valores de Dezena, Centena e Unidade respectivamente.
 
 
 exibir_pov:
 
 
-    ldi   r16, 0         ; Limpa r16 antes de carregar
-    out   PORTD, r16     ; Limpa o rastro do digito anterior
-    
-    cp r4, r16
-    breq centena_zero
-    cbi   PORTB, 0
+	ldi r19, 0
+	mov r16, r4
 
+    rcall invert_bit
+    swap r16
+	out PORTD, r16
+
+	cp r4, r19
+
+    breq centena_zero
+    sbi   PORTB, 0
     centena_zero:
 
-    mov r16, r4         ; Pega o valor 0-9 da Centena
+	cbi PORTD, 3
+	cbi PORTD, 2
+	rcall delay_mili
+
+
+
+	mov r16, r5
+	mov r17, r5
+	or r17, r4
+
+	rcall invert_bit
     swap r16
-    out PORTD, r16
-    sbi   PORTB, 0 
-    rcall delay_mili
 
-
-
-    ; Dezena
-    ldi   r16, 0         ; Limpa r16 antes de carregar
-    out   PORTD, r16     ; Limpa o rastro do digito anterior
-
-    mov r17, r5
-    or r17, r4
-    cp r17, r16
+	out PORTD, r16
+	cpi r17, 0
     breq dezena_zero
-    cbi   PORTD, 3  
+    sbi   PORTD, 3  
 
     dezena_zero:
+	cbi PORTD, 2
+	cbi PORTB, 0
+	rcall delay_mili
 
-    mov r16, r5         ; Pega o valor 0-9 da Dezena
+
+	mov r16, r6
+	rcall invert_bit
     swap r16
     out PORTD, r16
-    sbi   PORTD, 3    
-    rcall delay_mili
+    sbi PORTD, 2
+	cbi PORTD, 3
+	cbi PORTB, 0
 
-
-
-    ; Unidade
-    ldi   r16, 0         ; Limpa r16 antes de carregar
-    out   PORTD, r16     ; Limpa o rastro do digito anterior
-
-    cbi   PORTD, 2    
-    swap r16
-
-    out PORTD, r16
-    sbi   PORTD, 2   
-    rcall delay_mili
+	rcall delay_mili
    
     
     ret
@@ -101,8 +102,8 @@ exibir_pov:
 
 delay_mili:
    clr     r21         
-   ldi     r22, 10
-   ldi     r23, 2 
+   ldi     r22, 0
+   ldi     r23, 1
 
 
 delay_loop_mili:
@@ -114,258 +115,122 @@ delay_loop_mili:
     brne    delay_loop_mili  
     ret
 
+invert_bit:
+    cpi r16, 1
+    brne value_2
+    ldi r16, 8
+    rjmp fim
 
+    value_2: 
+    cpi r16, 2
+    brne value_3
+    ldi r16, 4
+    rjmp fim
+
+    value_3: 
+    cpi r16, 3
+    brne value_4
+    ldi r16, 0x0C
+    rjmp fim
+
+    value_4:
+    cpi r16, 4
+    brne value_5
+    ldi r16, 2
+    rjmp fim
+
+    value_5:
+    cpi r16, 5
+    brne value_6
+    ldi r16, 0x0A
+    rjmp fim
+
+    value_6:
+    cpi r16, 6
+    brne value_7
+    rjmp fim
+
+    value_7:
+    cpi r16, 7
+    brne value_8
+    ldi r16, 0x0E
+    rjmp fim
+
+    value_8:
+    cpi r16, 8
+    brne value_9
+    ldi r16, 1
+    rjmp fim
+
+    value_9:
+    cpi r16, 9
+    rjmp fim
+
+    fim:
+    ret
 
 inc_pointer:
-    adiw r26, 1             ; Incrementa o ponteiro X (r27:r26)
+    adiw r30, 1             ; Incrementa o ponteiro X (r27:r26)
+	mov r26, r30			; Move para o registrador 30
 
-    ldi r18, low(fim_lista) ; Carrega o byte baixo do endereço de fim
-    ldi r19, high(fim_lista) ; Carrega o byte alto do endereço de fim
+    ldi r26, low(fim_lista<<1) ; Carrega o byte baixo do endereço de fim
+    ldi r27, high(fim_lista<<1) ; Carrega o byte alto do endereço de fim
 
     cp  r26, r18            ; Compara a parte baixa
-    cpc r27, r19            ; Compara a parte alta com o Carry do anterior
+    cpc r27, r19          ; Compara a parte alta com o Carry do anterior
     
     ; IF
     brne fim_inc            ; Se NÃO for igual ao fim, sai da função
     
     ; --- ELSE (Reset para o início da lista, Exibição Rotativa) ---
-    ldi r26, low(lista)     
-    ldi r27, high(lista)     
+    ldi r30, low(lista<<1)     
+    ldi r31, high(lista<<1)     
 
 fim_inc:
     ret
 
-
-.cseg
-lista:
-    .db 3, 5, 8, 13, 21, 34, 55, 89, 134, 223
-fim_lista:
-
-
 main:
     
     ; Definindo PORTD como saída
-    ldi r16, 0x1E
-    out DDRD, r16 ; 0001 1110
+    ldi r16, 0xFC
+    out DDRD, r16; 0001 1110
 
     sbi DDRB, 0 ; PB0 (Pino 8) Saída
-    sbi DDRB, 1 ; PB0 (Pino 8) Saída
-    sbi DDRB, 2 ; PB0 (Pino 8) Saída
 
    ; Elemento Inicial da Lista L(0)
-    ldi r30, low(lista)
-    ldi r31, high(lista)
-    
-    ; Registrador X para transferência entre FLASH e RAM
-    mov r26, r30
-    mov r27, r31
+	;ldi r21, low(lista<<1)
 
+	inicio_lista:
+	ldi r24, 0
+    ldi r30, low(lista<<1)
+    ldi r31, high(lista<<1)
+
+	
 MAIN_LOOP:
-    ; Copia o endereço atual do X para o Z para poder usar o LPM
-    mov r30, r26
-    mov r31, r27
+	
+	lpm r20, Z+
 
-    ; Busca o valor atual da Lista(L(0), L(1), ...)
-    lpm r20, Z          
+	cpi r24, 10	
+	breq inicio_lista
+	inc r24
 
-    ; Converte o numero em r20 para BCD
-    rcall convert_BCD   
-    
-    ; Loop longo(~1 s)
-    ldi r25, 14
+	rcall convert_BCD
+	
+	ldi r25, 30
 loop_pov:
-    rcall exibir_pov    ;  Exibe CDU, usando multiplexação rápida
+    rcall exibir_pov    ;  Exibe CDU, usando multiplexação 
     dec r25
+	cpi r25, 0
     brne loop_pov
+	
 
-    
-    ; Incrementa o ponteiro da lista
-    rcall inc_pointer
+		
+	;rcall inc_pointer
 
-
-    rjmp MAIN_LOOP
+    rjmp MAIN_LOOP  
 rjmp main
 
 
-
-
-.cseg
-
-
-convert_BCD:
-
-
-  dividir:
-    CLR R4 //limpa R4
-    CLR R5 //limpa R5
-    CLR R6 //limpa R6
-    MOV R16, R20 //preserva R0
-    
-
-  div_centena:
-    CPI R16, 0x64
-    BRLO div_dezena //Desvia se R7<R1
-    SUBI R16, 0x64
-    INC R4
-    rjmp div_centena
-    
-    
-  div_dezena:
-    CPI R16, 0x0A
-    BRLO div_unidade
-    SUBI R16, 0x0A
-    INC R5
-    rjmp div_dezena //Desvia se R7<R1
-
-  div_unidade:
-    CPI R16, 0x01
-    BRLO div_sair
-    SUBI R16, 0x01
-    INC R6
-    rjmp div_unidade //Desvia se R7<R1
-  //div_unidade:
-
-    
-  div_sair:
-    //MOV R6, R16
-    RET //retorna
-    //R4, R5, R6 retorna os valores de Dezena, Centena e Unidade respectivamente.
-
-
-exibir_pov:
-
-
-    ldi   r16, 0         ; Limpa r16 antes de carregar
-    out   PORTD, r16     ; Limpa o rastro do digito anterior
-    
-    cp r4, r16
-    breq centena_zero
-    cbi   PORTB, 2
-
-    centena_zero:
-
-    mov r16, r4         ; Pega o valor 0-9 da Centena
-    swap r16
-    out PORTD, r16
-    rcall delay_mili
-    sbi   PORTB, 2 
-
-
-    ; Dezena
-    ldi   r16, 0         ; Limpa r16 antes de carregar
-    out   PORTD, r16     ; Limpa o rastro do digito anterior
-
-    mov r17, r5
-    or r17, r4
-    cp r17, r16
-    breq dezena_zero
-    cbi   PORTB, 1  
-
-    dezena_zero:
-
-    mov r16, r5         ; Pega o valor 0-9 da Dezena
-    swap r16
-    out PORTD, r16
-    rcall delay_mili
-    sbi   PORTB, 1    
-
-
-    ; Unidade
-    ldi   r16, 0         ; Limpa r16 antes de carregar
-    out   PORTD, r16     ; Limpa o rastro do digito anterior
-
-    cbi   PORTB, 0    
-    swap r16
-
-    out PORTD, r16
-    rcall delay_mili
-    sbi   PORTB, 0      
-    
-    ret
-
-
-
-delay_mili:
-   clr     r21         
-   ldi     r22, 10
-   ldi     r23, 2 
-
-
-delay_loop_mili:
-    dec     r22         
-    brne    delay_loop_mili  
-    dec     r21         
-    brne    delay_loop_mili  
-    dec     r23         
-    brne    delay_loop_mili  
-    ret
-
-
-
-inc_pointer:
-    adiw r26, 1             ; Incrementa o ponteiro X (r27:r26)
-
-    ldi r18, low(fim_lista*2) ; Carrega o byte baixo do endereço de fim
-    ldi r19, high(fim_lista*2) ; Carrega o byte alto do endereço de fim
-
-    cp  r26, r18            ; Compara a parte baixa
-    cpc r27, r19            ; Compara a parte alta com o Carry do anterior
-    
-    ; IF
-    brne fim_inc            ; Se NÃO for igual ao fim, sai da função
-    
-    ; --- ELSE (Reset para o início da lista, Exibição Rotativa) ---
-    ldi r26, low(lista*2)     
-    ldi r27, high(lista*2)     
-
-fim_inc:
-    ret
-
-
-//.section .progmem
 lista:
-    .db 10, 160, 170, 180, 190, 200, 210, 220, 230, 240
+    .db 3, 5, 8, 13, 21, 34, 55, 89, 134, 223
 fim_lista:
-
-
-main:
-    
-    ; Definindo PORTD como saída
-    ldi r16, 0x1E
-    out DDRD, r16 ; 1111 1100
-
-    sbi DDRB, 0 ; PB0 (Pino 8) Saída
-
-   ; Elemento Inicial da Lista L(0)
-    ldi r30, low(lista*2)
-    ldi r31, high(lista*2)
-    
-    ; Registrador X para transferência entre FLASH e RAM
-    mov r26, r30
-    mov r27, r31
-
-MAIN_LOOP:
-    ; Copia o endereço atual do X para o Z para poder usar o LPM
-    mov r30, r26
-    mov r31, r27
-
-    ; Busca o valor atual da Lista(L(0), L(1), ...)
-    lpm r20, Z          
-
-    ; Converte o numero em r20 para BCD
-    rcall convert_BCD   
-    
-
-    ; Loop longo(~1 s)
-    ldi r25, 14
-loop_pov:
-    rcall exibir_pov    ;  Exibe CDU, usando multiplexação rápida
-    dec r25
-    brne loop_pov
-
-    
-    ; Incrementa o ponteiro da lista
-    rcall inc_pointer
-
-
-    rjmp MAIN_LOOP
