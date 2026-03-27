@@ -115,7 +115,7 @@ delay_loop_mili:
     brne    delay_loop_mili  
     ret
 
-
+; Função de Inverter os Bits
 invert_bit:
     cpi r16, 1
     brne value_2
