@@ -115,6 +115,7 @@ delay_loop_mili:
     brne    delay_loop_mili  
     ret
 
+
 invert_bit:
     cpi r16, 1
     brne value_2
@@ -169,25 +170,6 @@ invert_bit:
     fim:
     ret
 
-inc_pointer:
-    adiw r30, 1             ; Incrementa o ponteiro X (r27:r26)
-	mov r26, r30			; Move para o registrador 30
-
-    ldi r26, low(fim_lista<<1) ; Carrega o byte baixo do endereço de fim
-    ldi r27, high(fim_lista<<1) ; Carrega o byte alto do endereço de fim
-
-    cp  r26, r18            ; Compara a parte baixa
-    cpc r27, r19          ; Compara a parte alta com o Carry do anterior
-    
-    ; IF
-    brne fim_inc            ; Se NÃO for igual ao fim, sai da função
-    
-    ; --- ELSE (Reset para o início da lista, Exibição Rotativa) ---
-    ldi r30, low(lista<<1)     
-    ldi r31, high(lista<<1)     
-
-fim_inc:
-    ret
 
 main:
     
@@ -198,8 +180,6 @@ main:
     sbi DDRB, 0 ; PB0 (Pino 8) Saída
 
    ; Elemento Inicial da Lista L(0)
-	;ldi r21, low(lista<<1)
-
 	inicio_lista:
 	ldi r24, 0
     ldi r30, low(lista<<1)
@@ -208,14 +188,18 @@ main:
 	
 MAIN_LOOP:
 	
+	; Carregamento do Valor do Endereço Z da flash em r20
 	lpm r20, Z+
 
+	; Comparação do contador para verificar se alcançou o fim da lista
 	cpi r24, 10	
 	breq inicio_lista
 	inc r24
 
+	; Conversor BIN -> BCD
 	rcall convert_BCD
 	
+	; Delay de ~1s
 	ldi r25, 30
 loop_pov:
     rcall exibir_pov    ;  Exibe CDU, usando multiplexação 
@@ -223,10 +207,6 @@ loop_pov:
 	cpi r25, 0
     brne loop_pov
 	
-
-		
-	;rcall inc_pointer
-
     rjmp MAIN_LOOP  
 rjmp main
 
