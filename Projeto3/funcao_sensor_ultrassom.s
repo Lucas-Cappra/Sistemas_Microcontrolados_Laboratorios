@@ -1,4 +1,4 @@
-﻿.include "m328pdef.inc"
+.include "m328pdef.inc"
 
 ;========================================
 ; DEFINIÇÕES
@@ -32,6 +32,36 @@ main:
 
     LDI R16, (1<<CS11)
     STS TCCR1B, R16
+
+;========================================
+; CONVERSÃO: ticks → cm
+; Entrada:  R21:R20 (16 bits)
+; Saída:    R22 (distância em cm)
+;========================================
+convert_cm:
+
+    CLR R22          ; resultado
+
+div_loop:
+
+    ; se valor < 116 → terminou
+    LDI R23, 116
+    CP R20, R23
+    CPC R21, R1      ; R1 = 0 sempre
+
+    BRLO div_end
+
+    ; subtrai 116
+    SUBI R20, 116
+    SBCI R21, 0
+
+    INC R22
+    RJMP div_loop
+
+div_end:
+    RET
+
+
 
 loop:
 
