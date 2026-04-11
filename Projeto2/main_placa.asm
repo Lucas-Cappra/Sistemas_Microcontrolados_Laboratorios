@@ -5,7 +5,7 @@
 
 rjmp main
 
-.org 0x0008
+.org 0x0005
 
 rjmp ISR_BOTOES    ; Vetor de PCINT0 (Pinos A0-A5)
 
@@ -575,9 +575,14 @@ main:
 
     SETUP_BOTOES:  ;A1, A2, A3
     cbi DDRC, 1
+	cbi DDRC, 2
+	cbi DDRC, 3
+
     sbi PORTC, 1       ; Ativa Pull-up no A1
-    
-    ldi r16, (1 << PCIE1)
+    sbi PORTC, 2       ; Ativa Pull-up no A2
+	sbi PORTC, 3       ; Ativa Pull-up no A3
+
+    ldi r16, (1 << PCIE2)
     sts PCICR, r16     ; Grupo Port C
     ldi r16, (1 << PCINT9)
     sts PCMSK1, r16    ; Pino A1
