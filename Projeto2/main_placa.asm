@@ -11,19 +11,60 @@ rjmp ISR_BOTOES    ; Vetor de PCINT0 (Pinos 8-13)
 
 
 
-ler_adc:
-    lds r26, ADCSRA
-    ori r26, (1 << ADSC)    ; Inicia conversão
-    sts ADCSRA, r26
 
-aguarda_adc:
-    lds r26, ADCSRA
-    sbrc r26, ADSC          ; Espera terminar
-    rjmp aguarda_adc
+
+ISR_BOTOES:
+    push r16
+    in r16, SREG
+    push r16
+
+    S2:
+    ; 1. Verifica se foi um aperto (0) ou solte (1)
+    sbic PINC, 2        ; Se for 1 (soltou), pula para o fim
+    rjmp S3
+
+    ; 2. O botão foi apertado! Incrementa o estado
+    ldi r17, 1
+    mov r15, r17
     
-    lds r26, ADCH          ; Lê apenas os 8 bits principais
-    ret
+    S3:
+    sbic PINC, 1        ; Se for 1 (soltou), pula para o fim
+    rjmp S1
 
+    ; 2. O botão foi apertado! Incrementa o estado
+    ldi r18, 1
+
+
+    S1:
+    sbic PINC, 3        ; Se for 1 (soltou), pula para o fim
+    rjmp sair_isr
+
+    ; 2. O botão foi apertado! Incrementa o estado
+    ldi r18, 0
+    
+    ; --- TRAVA DE SEGURANÇA ---
+    ; Fica aqui enquanto o botão estiver pressionado (0)
+
+sair_isr:
+    pop r16
+    out SREG, r16
+    pop r16
+    reti
+
+
+ler_adc:
+    lds r16, ADCSRA
+    ori r16, (1<<ADSC)
+    sts ADCSRA, r16                 ; conversao
+
+wait_adc:
+    lds r16, ADCSRA
+    sbrs r16, ADSC
+    rjmp wait_adc
+
+    lds r22, ADCL
+    lds r23, ADCH
+    ret
 
 
 
@@ -44,35 +85,41 @@ maquina_de_estados:
     cpi r19, 4
     breq step
 
+    ldi r19, 1
+
     rjmp fim_maquina
 
 
     ; Estado Inicial(Reset)
     init:
-    cbi PORTB, 1
-    cbi PORTB, 2
-    cbi PORTB, 3
+    cbi PORTC, 1
+    cbi PORTC, 2
+    cbi PORTC, 3
 
-    ;clr r20
-    ;clr r24
-    ldi r24, 1
-    mov r28, r24
-    ldi r25, 255
-    ldi r27, 1
+    ldi r30, 0x03
+    ldi r31, 0xE7
 
+    ldi r29, 0
+    ldi r28, 0
 
-    ;inc r19
+    ldi r27, 0
+    ldi r26, 0
+
+    ldi r25, 1
+
     ldi r19, 1
+
     rjmp fim_maquina
 
 
     ; Estado de Contagem
     count:
-    sbi PORTB, 1
-    cbi PORTB, 2
-    sbi PORTB, 3
+    cbi PORTC, 1
+    sbi PORTC, 2
+    cbi PORTC, 3
     
-    mov r20, r28
+    mov r20, r26
+    mov r21, r27
 
     rcall inc_dec
     
@@ -81,54 +128,73 @@ maquina_de_estados:
 
     ; Estado de Seleção do Valor Mínimo
     min:
-    ;push r20
 
     rcall ler_adc
-    mov r24, r26
-    mov r20, r24
+    rcall map_adc
+    mov r28, r22
+    mov r29, r23
 
-    sbi PORTB, 1
-    cbi PORTB, 2
-    cbi PORTB, 3
+    mov r20, r28
+    mov r21, r29
+
+    cbi PORTC, 1 
+    sbi PORTC, 2
+    sbi PORTC, 3
 
 
 
-    ;pop r20
     rjmp fim_maquina
 
     ; Estado de Seleção do Valor Máximo
     max_state:
-    ;push r20
 
     rcall ler_adc
-    mov r25, r26
-    mov r20, r25
+    rcall map_adc
+
+    mov r30, r22
+    mov r31, r23
+
+    mov r20, r30
+    mov r21, r31
 
 
-    cbi PORTB, 1
-    sbi PORTB, 2 
-    cbi PORTB, 3
+    sbi PORTC, 1
+    cbi PORTC, 2 
+    sbi PORTC, 3
 
 
-    ;pop r20
     rjmp fim_maquina
 
 
     ; Estado de Seleção do Valor de Passo
 
     step:
-    ;push r20
-
+    clr r16
     rcall ler_adc
-    mov r27, r26
-    mov r20, r27
+    rcall map_step
+   ;mov r20, r25
+    ;ldi r21, 0
 
-    cbi PORTB, 1
-    cbi PORTB, 2
-    sbi PORTB, 3 
+    mov r25, r22
+    
+    mov r20, r25
+    mov r21, r23
 
 
-    ;pop r20
+    sbi PORTC, 1
+    sbi PORTC, 2
+    cbi PORTC, 3 
+
+    carrega_minimo:
+    cpi r18, 1
+    breq carrega_maximo
+    mov r26, r28
+    mov r27, r29
+
+    carrega_maximo:
+    mov r26, r30
+    mov r27, r31
+
     rjmp fim_maquina
 
 
@@ -138,58 +204,86 @@ maquina_de_estados:
 
 
 
+  convert_BCD:
 
-convert_BCD:
+    push r17
+    push r16
 
-  dividir:
-    CLR R4 ;limpa R4
-    CLR R5 ;limpa R5
-    CLR R6 ;limpa R6
-    MOV R16, R20 ;preserva R0
-    
+    CLR R4        ; centenas
+    CLR R5        ; dezenas
+    CLR R6        ; unidades
 
-  div_centena:
-    CPI R16, 0x64
-    BRLO div_dezena ;Desvia se R7<R1
-    SUBI R16, 0x64
+    MOV R16, R20  ; LOW byte
+    MOV R17, R21  ; HIGH byte
+
+;========================================================
+; CENTENAS (subtrai 100 = 0x0064)
+;========================================================
+
+div_centena:
+    CPI R17, 0
+    BRNE sub_100          ; se high > 0, pode subtrair
+
+    CPI R16, 100
+    BRLO div_dezena       ; se <100, vai para dezenas
+
+sub_100:
+    SUBI R16, 100         ; subtrai low
+    SBCI R17, 0           ; subtrai carry do high
     INC R4
-    rjmp div_centena
-    
-    
-  div_dezena:
-    CPI R16, 0x0A
+    RJMP div_centena
+
+;========================================================
+; DEZENAS (subtrai 10 = 0x000A)
+;========================================================
+
+div_dezena:
+    CPI R17, 0
+    BRNE sub_10           ; se high > 0, continua
+
+    CPI R16, 10
     BRLO div_unidade
-    SUBI R16, 0x0A
+
+sub_10:
+    SUBI R16, 10
+    SBCI R17, 0
     INC R5
-    rjmp div_dezena ;Desvia se R7<R1
+    RJMP div_dezena
 
-  div_unidade:
-    CPI R16, 0x01
+;========================================================
+; UNIDADES (subtrai 1)
+;========================================================
+
+div_unidade:
+    CPI R17, 0
+    BRNE sub_1
+
+    CPI R16, 1
     BRLO div_sair
-    SUBI R16, 0x01
-    INC R6
-    rjmp div_unidade ;Desvia se R7<R1
-  ;div_unidade:
 
-    
-  div_sair:
-    RET ;retorna
-    ;R4, R5, R6 retorna os valores de Dezena, Centena e Unidade respectivamente.
+sub_1:
+    SUBI R16, 1
+    SBCI R17, 0
+    INC R6
+    RJMP div_unidade
+
+div_sair:
+    pop r16
+    pop r17
+    RET
 
 
 exibir_pov:
-		
-	
-	clr r14
+
+
+	ldi r19, 0
 	mov r16, r4
 
     rcall invert_bit
     swap r16
 	out PORTD, r16
 
-	; Comparação pra verificar se a centena é nula, para não mostrar no display
-	cp r4, r14
-	pop r19
+	cp r4, r19
 
     breq centena_zero
     sbi   PORTB, 0
@@ -197,31 +291,25 @@ exibir_pov:
 
 	cbi PORTD, 3
 	cbi PORTD, 2
-
-	; Delay de 3 ms
 	rcall delay_mili
 
 
 
 	mov r16, r5
-	mov r13, r5
-	or r13, r4
+	mov r17, r5
+	or r17, r4
 
 	rcall invert_bit
     swap r16
 
 	out PORTD, r16
-
-	; Comparação para verificar se a dezena é nula, e não mostrar no display em caso positivo
-	cp r13, r14
+	cpi r17, 0
     breq dezena_zero
     sbi   PORTD, 3  
 
     dezena_zero:
 	cbi PORTD, 2
 	cbi PORTB, 0
-	
-	; Delay de 3 ms
 	rcall delay_mili
 
 
@@ -233,11 +321,95 @@ exibir_pov:
 	cbi PORTD, 3
 	cbi PORTB, 0
 
-	; Delay de 3 ms
 	rcall delay_mili
    
     
     ret
+
+
+map_step:
+    push r17
+    push r18
+
+
+    ; Recebe o valor da conversão AD = r23:r22
+    mov r17, r22
+    mov r18, r23
+
+    ; Desloca 6 vezes a direita
+    ldi r16, 6
+div_64:
+    lsr r18
+    ror r17
+    dec r16
+    cpi r16, 0
+    brne div_64
+
+    ; Volta pros registradores de valores
+    mov r22, r17
+    mov r23, r18
+
+    ; Retorna o valor convertido
+    pop r18
+    pop r17
+    ret
+
+
+    
+map_adc:
+    ; Calcula ADC - 24*ADC/1024
+    ; R23:R22 = ADC (10 bits)
+    push r16
+    push r17
+    push r18
+    push r24
+    push r25
+
+
+    ; calcula ADC*24
+    mov r17, r22
+    mov r18, r23
+
+    ; *8
+    lsl r17
+    rol r18
+    lsl r17
+    rol r18
+    lsl r17
+    rol r18
+
+    mov r24, r17
+    mov r25, r18
+
+    ; *16
+    lsl r17
+    rol r18
+
+    ; soma 8*ADC + 16*ADC
+    add r17, r24
+    adc r18, r25
+
+        ; divide por 1024
+    ldi r16, 10
+map_l2:
+    lsr r18
+    ror r17
+    dec r16
+    brne map_l2
+
+    ; subtrai
+    sub r22, r17
+    sbc r23, r18
+
+
+    pop r25
+    pop r24
+    pop r18
+    pop r17
+    pop r16
+    ret
+
+
 
 
 
@@ -313,26 +485,40 @@ invert_bit:
 
 
 
+
 inc_dec:
+    clr r16
     cpi r18, 1
-    breq subtrair
+    breq subtrair 
 
 somar:
-    add r28, r27         ; Soma o passo
-    cp  r28, r25         ; Compara com o Máximo (r25)
+    add r26, r25         ; Soma o passo
+    adc r27, r16         ; Soma com carry
+
+    cp  r26, r30         ; Compara com o Máximo (r25)
+    cpc r27, r31
+
     brlo fim_inc         ; Se r20 < r25, está ok, sai
     breq fim_inc         ; Se r20 == r25, está no limite, sai
-    mov r28, r24         ; Se passou do máximo, volta para o Mínimo (Reset)
+    mov r26, r28         ; Se passou do máximo, volta para o Mínimo (Reset)
+    mov r27, r29
     rjmp fim_inc
 
 subtrair:
-    sub r28, r27         ; Subtrai o passo
-    cp  r28, r24         ; Compara com o Mínimo (r24)
+    sub r26, r25         ; Subtrai o passo
+    sbc r27, r16         ; Subtrai com carry
+
+    cp  r26, r28         ; Compara com o Mínimo (r24)
+    cpc r27, r29
+
     brsh fim_inc         ; Se r20 >= r24 (Same or Higher), está ok, sai
-    mov r28, r25         ; Se ficou menor que o mínimo, pula para o Máximo
+    mov r26, r30         ; Se ficou menor que o mínimo, pula para o Máximo
+    mov r27, r31
 
 fim_inc:
     ret
+
+
 
 
 exibir:
@@ -369,10 +555,15 @@ main:
     sbi DDRB, 2 ; PB2 (Pino 10) Saida
     sbi DDRB, 3 ; PB3 (Pino 11) Saida
 
+	sbi PORTB, 1
+    sbi PORTB, 2
+    sbi PORTB, 3
+
+	
 
     setup_AD_Converter:
-    ; Canal A5 (MUX2 e MUX0), Referência AVcc (REFS0), Ajuste à Esquerda (ADLAR)
-    ldi r16, (1 << REFS0) | (1 << ADLAR) | (1 << MUX2) | (1 << MUX0)
+    ; Canal A0 (MUX0), Referência AVcc (REFS0), Ajuste à Esquerda (ADLAR)
+    ldi r16, (1 << REFS0) | (1 << ADLAR) | (1 << MUX0)
     sts ADMUX, r16
     ; Habilita ADC (ADEN) e Prescaler 128 (ADPS0,1,2)
     ldi r16, (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0)
@@ -398,7 +589,7 @@ main:
     ldi r18, 0
 
     init_state:
-    ;ldi r19, 0
+    clr r19
     
 
 MAIN_LOOP:
@@ -406,15 +597,18 @@ MAIN_LOOP:
 	; Atualiza o Estado do Sistema
     rcall maquina_de_estados
 
-    ; Converte o numero em r20 para BCD
+    ; Converte o numero em r20 e r21 para BCD
     rcall convert_BCD
 
 	; Exibe de acordo com o efeito POV
     rcall exibir
-    ;inc r19
-    cpi r19, 5
-    brlo continua
-    ldi r19, 1          ; Se for 5 ou mais, volta pro zero
+
+	; Comparação da label para verificar se o botão de troca de estado foi acionado
+	ldi r17, 1
+    cp  r15, r17
+    brne continua
+    inc r19
+    clr r15
     
 continua:
 
