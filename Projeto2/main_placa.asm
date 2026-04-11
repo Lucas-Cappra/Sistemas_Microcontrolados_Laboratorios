@@ -7,7 +7,7 @@ rjmp main
 
 .org 0x0008
 
-rjmp ISR_BOTOES    ; Vetor de PCINT0 (Pinos 8-13)
+rjmp ISR_BOTOES    ; Vetor de PCINT0 (Pinos A0-A5)
 
 
 
