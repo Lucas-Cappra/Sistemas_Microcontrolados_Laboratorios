@@ -99,15 +99,15 @@ wait_adc:
     ret
 
 ;========================================================
-; ========= MAPEAMENTO 0–1023 x 0–999 ====================
-; Saída final em R20 
+; ========= MAPEAMENTO 0â€“1023 x 0â€“999 ====================
+; SaÃ­da final em R20 
 ;========================================================
 
 map_adc:
 
     ; R18:R17 = ADC (10 bits)
 
-    ; aproximação: (ADC * 1000) / 1024
+    ; aproximaÃ§Ã£o: (ADC * 1000) / 1024
 
     mov r20, r17
     mov r21, r18
@@ -155,7 +155,7 @@ map_l2:
     dec r16
     brne map_l2
 
-    ; AGORA R20 = valor final (0–999 aproximado)
+    ; AGORA R20 = valor final (0â€“999 aproximado)
     ret
 
 ;========================================================
@@ -283,11 +283,11 @@ fim:
 
 main:
 
-    ; PORTD saída (segmentos)
+    ; PORTD saÃ­da (segmentos)
     ldi r16, 0xFC
     out DDRD, r16
 
-    ; PORTB seleção display
+    ; PORTB seleÃ§Ã£o display
     sbi DDRB, 0
 
     rcall init_adc
@@ -297,13 +297,13 @@ MAIN_LOOP:
     ; leitura ADC
     rcall read_adc
 
-    ; mapeamento 0–999
+    ; mapeamento 0â€“999
     rcall map_adc
 
-    ; valor já está em R20 ? usa seu BCD
+    ; valor jÃ¡ estÃ¡ em R20 ? usa seu BCD
     rcall convert_BCD
 
-    ; exibição POV
+    ; exibiÃ§Ã£o POV
     ldi r25, 30
 
 loop_pov:
