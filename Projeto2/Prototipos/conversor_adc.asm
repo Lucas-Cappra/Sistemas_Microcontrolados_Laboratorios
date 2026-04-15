@@ -21,7 +21,7 @@ out SPL, r16
 ; =========================
 ; CONFIGURA ADC
 ; =========================
-ldi r16, (1<<REFS0)        ; AVcc como referência
+ldi r16, (1<<REFS0)        ; AVcc como referÃªncia
 sts ADMUX, r16
 
 ldi r16, (1<<ADEN) | (1<<ADPS2) | (1<<ADPS1) ; habilita ADC, prescaler 64
@@ -29,7 +29,7 @@ sts ADCSRA, r16
 
 loop:
 
-; Inicia conversão
+; Inicia conversÃ£o
 lds r16, ADCSRA
 ori r16, (1<<ADSC)
 sts ADCSRA, r16
@@ -40,22 +40,22 @@ lds r16, ADCSRA
 sbrc r16, ADSC
 rjmp wait_adc
 
-; Lê resultado (10 bits)
+; LÃª resultado (10 bits)
 lds R20, ADCL
 lds R21, ADCH
 
 ; =========================
-; CHAMA CONVERSÃO
+; CHAMA CONVERSÃƒO
 ; =========================
 rcall converte
 
 ; Resultado:
-; R25:R24 = valor entre 0–999
+; R25:R24 = valor entre 0â€“999
 
 rjmp loop
 
 ; =========================
-; FUNÇÃO DE CONVERSÃO
+; FUNÃ‡ÃƒO DE CONVERSÃƒO
 ; y ? (x * 1000) >> 10
 ; =========================
 converte:
@@ -71,7 +71,7 @@ clr R18
 clr R19
 
 ; =========================
-; multiplicação 16x16
+; multiplicaÃ§Ã£o 16x16
 ; =========================
 
 mul R20, R22
