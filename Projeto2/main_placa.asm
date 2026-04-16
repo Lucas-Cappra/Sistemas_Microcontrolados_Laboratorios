@@ -5,7 +5,7 @@
 
 rjmp main
 
-.org 0x0005
+.org 0x0008
 
 rjmp ISR_BOTOES    ; Vetor de PCINT0 (Pinos A0-A5)
 
@@ -52,19 +52,19 @@ sair_isr:
     reti
 
 
-ler_adc:
-    lds r16, ADCSRA
-    ori r16, (1<<ADSC)
-    sts ADCSRA, r16                 ; conversao
+
+ler_adc:   
+	ldi     r16, 0xC7    
+	sts     ADCSRA, r16   ; inicie a conversao 
 
 wait_adc:
-    lds r16, ADCSRA
-    sbrs r16, ADSC
-    rjmp wait_adc
+	lds     r16, ADCSRA  ; carregue no registrador 20 o valor de ADCSRA
+	sbrs    r16, ADIF    ; verifique se o processo de conversao finalizou
+	rjmp    wait_adc 
+	lds     r22, ADCL    ; carregue o valor (L) do conversor ad no registrador 21
+	lds     r23, ADCH    ; carregue o valor (H) do conversor ad no registrador 22
+	ret      
 
-    lds r22, ADCL
-    lds r23, ADCH
-    ret
 
 
 
@@ -77,7 +77,7 @@ maquina_de_estados:
     breq count
 
     cpi r19, 2
-    breq min
+    breq min_state
 
     cpi r19, 3
     breq max_state
@@ -92,9 +92,9 @@ maquina_de_estados:
 
     ; Estado Inicial(Reset)
     init:
-    cbi PORTC, 1
-    cbi PORTC, 2
-    cbi PORTC, 3
+    sbi PORTB, 1
+    sbi PORTB, 2
+    sbi PORTB, 3
 
     ldi r30, 0x03
     ldi r31, 0xE7
@@ -114,9 +114,9 @@ maquina_de_estados:
 
     ; Estado de Contagem
     count:
-    cbi PORTC, 1
-    sbi PORTC, 2
-    cbi PORTC, 3
+    sbi PORTB, 1
+    cbi PORTB, 2
+    sbi PORTB, 3
     
     mov r20, r26
     mov r21, r27
@@ -127,7 +127,7 @@ maquina_de_estados:
 
 
     ; Estado de Seleção do Valor Mínimo
-    min:
+    min_state:
 
     rcall ler_adc
     rcall map_adc
@@ -137,9 +137,9 @@ maquina_de_estados:
     mov r20, r28
     mov r21, r29
 
-    cbi PORTC, 1 
-    sbi PORTC, 2
-    sbi PORTC, 3
+    cbi PORTB, 1 
+    sbi PORTB, 2
+    cbi PORTB, 3
 
 
 
@@ -158,9 +158,9 @@ maquina_de_estados:
     mov r21, r31
 
 
-    sbi PORTC, 1
-    cbi PORTC, 2 
-    sbi PORTC, 3
+    cbi PORTB, 1
+    cbi PORTB, 2 
+    sbi PORTB, 3
 
 
     rjmp fim_maquina
@@ -181,9 +181,9 @@ maquina_de_estados:
     mov r21, r23
 
 
-    sbi PORTC, 1
-    sbi PORTC, 2
-    cbi PORTC, 3 
+    sbi PORTB, 1
+    cbi PORTB, 2
+    cbi PORTB, 3 
 
     carrega_minimo:
     cpi r18, 1
@@ -276,14 +276,14 @@ div_sair:
 exibir_pov:
 
 
-	ldi r19, 0
+	ldi r16, 0
 	mov r16, r4
 
     rcall invert_bit
     swap r16
 	out PORTD, r16
 
-	cp r4, r19
+	cp r4, r16
 
     breq centena_zero
     sbi   PORTB, 0
@@ -524,11 +524,11 @@ fim_inc:
 exibir:
 
     ; Delay (~1 s)
-    ldi r26, 30
+    ldi r24, 30
 loop_pov:
     rcall exibir_pov    ;  Exibe CDU, usando multiplexação rápida
-    dec r26
-    cpi r26, 0
+    dec r24
+    cpi r24, 0
     brne loop_pov
 
     ret
@@ -563,15 +563,12 @@ main:
 
     setup_AD_Converter:
     ; Canal A0 (MUX0), Referência AVcc (REFS0), Ajuste à Esquerda (ADLAR)
-    ldi r16, (1 << REFS0) | (1 << ADLAR) | (1 << MUX0)
+    ldi r16, (1 << REFS0)
     sts ADMUX, r16
     ; Habilita ADC (ADEN) e Prescaler 128 (ADPS0,1,2)
     ldi r16, (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0)
     sts ADCSRA, r16
     
-
-
-
 
     SETUP_BOTOES:  ;A1, A2, A3
     cbi DDRC, 1
@@ -582,10 +579,10 @@ main:
     sbi PORTC, 2       ; Ativa Pull-up no A2
 	sbi PORTC, 3       ; Ativa Pull-up no A3
 
-    ldi r16, (1 << PCIE2)
+    ldi r16, (1 << PCIE1)
     sts PCICR, r16     ; Grupo Port C
-    ldi r16, (1 << PCINT9)
-    sts PCMSK1, r16    ; Pino A1
+    ldi r16, (1 << PCINT9) | (1<< PCINT10) | (1<< PCINT11) ;(Pinos 9 até o 11 do Micro)
+    sts PCMSK1, r16    ; (Máscara Correspondente pro A1,A2 e A3)
   
 
     sei
