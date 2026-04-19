@@ -562,7 +562,7 @@ main:
 	
 
     setup_AD_Converter:
-    ; Canal A0 (MUX0), Referência AVcc (REFS0), Ajuste à Esquerda (ADLAR)
+    ; Canal A0 (MUX0), Referência AVcc (REFS0)
     ldi r16, (1 << REFS0)
     sts ADMUX, r16
     ; Habilita ADC (ADEN) e Prescaler 128 (ADPS0,1,2)
