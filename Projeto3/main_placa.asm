@@ -23,7 +23,7 @@ ISR_BOTOES:
 
     S2:
     ; Vai pro Estado de Salvar na Memória 
-    sbic PINB, 3        ; Se for 1 (soltou), pula para o fim
+    sbic PINC, 2        ; Se for 1 (soltou), pula para o fim
     rjmp S3
     cpi r24, 1
     brne S3
@@ -32,7 +32,7 @@ ISR_BOTOES:
     
     ; Vai pro Estado de Exibir
     S3:
-    sbic PINB, 4        ; Se for 1 (soltou), pula para o fim
+    sbic PINC, 3        ; Se for 1 (soltou), pula para o fim
     rjmp S1
     cpi r24, 1
     brne S1
@@ -41,10 +41,9 @@ ISR_BOTOES:
 
     ; Vai pro Estado de Medir uma Nova Distância
     S1:
-    sbic PINB, 5        ; Se for 1 (soltou), pula para o fim
+    sbic PINC, 1        ; Se for 1 (soltou), pula para o fim
     rjmp sair_isr
-
-    
+  
     ldi r24, 2
 
 
