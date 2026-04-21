@@ -1,10 +1,15 @@
-
 #define __SFR_OFFSET 0   // Ajuste obrigatório no GCC para os comandos OUT e IN funcionarem
 
 #include <avr/io.h>      // Biblioteca padrão do GCC com os registradores do ATmega328
 
 #define TRIG 4
 #define ECHO 5 
+
+
+;Botão Preto: Nova Medida
+;Botão Amarelo: Salvar na Memória
+;Botão Branco: Exibir Valor Salvo
+
 
 
 ; X: r30 - r31 (Actual Measure)
@@ -307,7 +312,7 @@ maquina_de_estados:
     rjmp fim_maquina
 
 
-    ; Estado de Contagem
+    ; Estado de Espera
     wait:
     sbi PORTC, 1
     cbi PORTC, 2
@@ -318,6 +323,7 @@ maquina_de_estados:
     rjmp fim_maquina
 
 
+    ; Estado de nova medida
     measure:
     cbi PORTC, 1
     cbi PORTC, 2
@@ -335,7 +341,7 @@ maquina_de_estados:
     rjmp fim_maquina
 
 
-    ; Estado de Seleção do Valor Mínimo
+    ; Estado de Salvar na Memória Não Volátil
     store:
     sbi PORTC, 1 
     cbi PORTC, 2
@@ -346,7 +352,7 @@ maquina_de_estados:
     ldi r24, 1
     rjmp fim_maquina
 
-    ; Estado de Seleção do Valor Máximo
+    ; Estado de Mostrar Valor salvo na EPROM
     show:
     cbi PORTC, 1
     sbi PORTC, 2 
