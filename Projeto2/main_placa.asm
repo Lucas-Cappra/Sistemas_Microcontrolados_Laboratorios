@@ -18,6 +18,7 @@ ISR_BOTOES:
     in r16, SREG
     push r16
 
+	; Pula pro próximo estado de acordo com a lógica cíclica( contagem->min->max->step_contagem)
     S2:
     ; 1. Verifica se foi um aperto (0) ou solte (1)
     sbic PINC, 2        ; Se for 1 (soltou), pula para o fim
@@ -26,7 +27,8 @@ ISR_BOTOES:
     ; 2. O botão foi apertado! Incrementa o estado
     ldi r17, 1
     mov r15, r17
-    
+
+	; Muda a contagem para decrescente com R18->1 
     S3:
     sbic PINC, 1        ; Se for 1 (soltou), pula para o fim
     rjmp S1
@@ -34,7 +36,7 @@ ISR_BOTOES:
     ; 2. O botão foi apertado! Incrementa o estado
     ldi r18, 1
 
-
+	; Muda a contagem para crescente com R18->0
     S1:
     sbic PINC, 3        ; Se for 1 (soltou), pula para o fim
     rjmp sair_isr
