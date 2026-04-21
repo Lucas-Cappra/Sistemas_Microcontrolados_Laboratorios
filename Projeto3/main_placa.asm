@@ -76,7 +76,7 @@ maquina_de_estados:
     rjmp fim_maquina
 
 
-    ; Estado Inicial(Reset)
+    ; Estado Inicial (Reset)
     init:
     ldi r20, 0x00
     ldi r21, 0x00
@@ -87,13 +87,13 @@ maquina_de_estados:
     rjmp fim_maquina
 
 
-    ; Estado de Contagem
+    ; Estado de Espera( Exibe a última medida)
     wait:
     
-
     rjmp fim_maquina
 
 
+	; Estado de medir(Mede a leitura do sensor e volta pro estado de espera)
     measure:
     rcall trigger_pulse
     rcall measure_echo
@@ -107,14 +107,14 @@ maquina_de_estados:
     rjmp fim_maquina
 
 
-    ; Estado de Seleção do Valor Mínimo
+    ; Estado de Salvar na memória não volátil
     store:
     rcall SALVAR
 
     ldi r24, 1
     rjmp fim_maquina
 
-    ; Estado de Seleção do Valor Máximo
+    ; Estado de Ler valor armazenado na memória
     show:
     rcall LER
 
