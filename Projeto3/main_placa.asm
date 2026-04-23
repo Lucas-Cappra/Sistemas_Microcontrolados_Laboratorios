@@ -1,7 +1,7 @@
 .include "m328pdef.inc"
 
-.def TRIG 4
-.def ECHO 5 
+.equ TRIG = 4
+.equ ECHO = 5 
 
 .cseg
 .org 0x0000           ; A proxima instruncao em 0x0000
@@ -23,7 +23,7 @@ ISR_BOTOES:
 
     S2:
     ; Vai pro Estado de Salvar na Memória 
-    sbic PINC, 2        ; Se for 1 (soltou), pula para o fim
+    sbic PINC, 1        ; Se for 1 (soltou), pula para o fim
     rjmp S3
     cpi r24, 1
     brne S3
@@ -41,7 +41,7 @@ ISR_BOTOES:
 
     ; Vai pro Estado de Medir uma Nova Distância
     S1:
-    sbic PINC, 1        ; Se for 1 (soltou), pula para o fim
+    sbic PINC, 2        ; Se for 1 (soltou), pula para o fim
     rjmp sair_isr
   
     ldi r24, 2
@@ -89,7 +89,8 @@ maquina_de_estados:
 
     ; Estado de Espera( Exibe a última medida)
     wait:
-    
+    ;sbi PINC, 4
+
     rjmp fim_maquina
 
 
@@ -99,6 +100,7 @@ maquina_de_estados:
     rcall measure_echo
     rcall convert_cm 
 
+	;sbi PINC, 4
     mov r20, r30
     mov r21, r31
 
@@ -233,7 +235,7 @@ convert_cm:
     CLR R28
 
 div_loop:
-    ; se valor < 116 → terminou
+    ; se valor < 116 ? terminou
     LDI R23, 116
     CP R20, R23
     CPC R21, R1      ; R1 = 0 sempre
@@ -266,7 +268,7 @@ d1:
 
 
 
-  convert_BCD:
+convert_BCD:
 
     push r17
     push r16
@@ -406,6 +408,7 @@ delay_loop_mili:
     ret
 
 
+
 invert_bit:
     cpi r16, 1
     brne value_2
@@ -490,7 +493,7 @@ main:
     sbi DDRB, 0 ; PB0 (Pino 8) Saída pro Transistor de Centena
 	
 
-    Setup_Sensor(A4, A5):
+    Setup_Sensor_A4_A5:
     sbi DDRC, TRIG
     cbi DDRC, ECHO
 
@@ -500,19 +503,31 @@ main:
 
     SETUP_BOTOES:  ;A1, A2, A3
     cbi DDRC, 1
-	  cbi DDRC, 2
-	  cbi DDRC, 3
+	cbi DDRC, 2
+	cbi DDRC, 3
 
     sbi PORTC, 1       ; Ativa Pull-up no A1
     sbi PORTC, 2       ; Ativa Pull-up no A2
-	  sbi PORTC, 3       ; Ativa Pull-up no A3
+	sbi PORTC, 3       ; Ativa Pull-up no A3
 
+	
 
     ldi r16, (1 << PCIE1)
     sts PCICR, r16     ; Grupo Port C
     ldi r16, (1 << PCINT9) | (1<< PCINT10) | (1<< PCINT11) ;(Pinos 9 até o 11 do Micro)
     sts PCMSK1, r16    ; (Máscara Correspondente pro A1,A2 e A3)
   
+		
+	;=============================
+    ; CONFIGURA TIMER1 (importante para o uso com o sensor ultrassônico pois usa 16bits, melhor resolução)
+    ; Prescaler = 8 (0.5us por tick)
+    ;=============================
+    LDI R16, 0x00
+    STS TCCR1A, R16
+
+    LDI R16, (1<<CS11)
+    STS TCCR1B, R16
+
 
     sei
 
@@ -520,7 +535,9 @@ main:
     clr r24
     
 
+
 MAIN_LOOP:
+	
 	
 	; Atualiza o Estado do Sistema
     rcall maquina_de_estados
