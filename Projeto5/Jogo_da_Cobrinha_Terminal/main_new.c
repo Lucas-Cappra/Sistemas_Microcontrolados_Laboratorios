@@ -32,6 +32,13 @@ void Iniciar_cobra(Snake *s) {
     s->y[0] = 4;
     s->direcao = DOWN; // Supondo 0 como DIREITA
     s->velocidade = 0.5;
+
+    // Preenche o resto do corpo com valores impossíveis
+    for(int i = 1; i < 8; i++) {
+        s->x[i] = -1;
+        s->y[i] = -1;
+    }
+    
 }
 
 
@@ -176,15 +183,19 @@ void animacao_game_over(volatile char matriz[8][8]){
 }
 
 
-char saiu_dos_limites(Snake *s){
-    return 1;
-    return 0;
-}
 
+void verifica_limites(Snake *s, char *count_minutes){
 
-void verifica_limites(Snake *s, int count_minutes){
+    char saiu = s->x[0]<0 || s->x[0]>7 || s->y[0]<0 || s->y[0]>7;
+    char sobreposicao = 0;
+    for (int l = 1; l<=s->tamanho; l++){
+        if (s->x[l] == s->x[0] && s->y[l] == s->y[0]){
+            sobreposicao = 1;
+            break;
+        }
+    }
 
-    if (s->x[0]<0 || s->x[0]>7 || s->y[0]<0 || s->y[0]>7)  {
+    if (saiu || sobreposicao)  {
         animacao_game_over(matriz); 
 
         Iniciar_cobra(s);
@@ -192,6 +203,7 @@ void verifica_limites(Snake *s, int count_minutes){
             // 3. Reseta as variáveis de controle de tempo/minutos
         count_minutes = 0;
     }
+    sobreposicao = 0;
 }
 
 
@@ -206,7 +218,7 @@ int main() {
         system("cls"); // Limpa o terminal
         controlar_direcao(&cobra);
         Mover_cobra(&cobra);
-        verifica_limites(&cobra, count_minutes);
+        verifica_limites(&cobra, &count_minutes);
         atualizar_matriz(matriz, &cobra);
         imprimir_matriz(matriz);
         Sleep(500);
