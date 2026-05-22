@@ -8,7 +8,7 @@ T_s = 1/Fs;
 % t = 0:Ts:t_fim;
 
 % Mensagens
-f_1 = 10;
+f_1 = 1;
 
 % w = sin(2*pi * f_1 * t);
 
@@ -21,13 +21,13 @@ w = [sin(2*pi * f_1 * tempo_decorrido)];
 
 % Plot do espectro de magnitude
 figure('Name', 'Osciloscópio em Tempo Real', 'NumberTitle', 'off');
-hPlot = plot(NaN, NaN, 'r', 'LineWidth', 1.5); % Cria um plot vazio estável
+hPlot = plot(NaN, NaN, 'b', 'LineWidth', 3.5); % Cria um plot vazio estável
 title('Sinal Sendo Amostrado em Tempo Real');
 xlabel('Tempo (s)');
 ylabel('Amplitude (V)');
 grid on;
 xlim([0 5]);            % Mostra uma janela deslizante de 5 segundos na tela
-ylim([-2.5 2.5]);       % Limites de amplitude do sinal composto
+ylim([-1.1 1.1]);       % Limites de amplitude do sinal composto
 
 
 
@@ -36,18 +36,15 @@ while tempo_decorrido < t_fim
         
     tempo_decorrido = tempo_decorrido + T_s;
     t(end+1) = tempo_decorrido;
-    w(end+1) = sin(2*pi * f_1 * tempo_decorrido);
-    % plot(t, x, 'red');
+    w(end+1) = sin(2 * pi * f_1 * tempo_decorrido);
     set(hPlot, 'XData', t, 'YData', w);
     title('Sinal Senoidal');
     xlabel('t (s)');
-    if tempo_decorrido > 0.5
-            xlim([tempo_decorrido - 0.5, tempo_decorrido]);
-    end
+    % if tempo_decorrido > 0.5
+    %         xlim([tempo_decorrido - 0.5, tempo_decorrido]);
+    % end
     drawnow;
     grid on;
-    % disp('Fim da iteração')
-    % tempo_decorrido
 
 end
 
