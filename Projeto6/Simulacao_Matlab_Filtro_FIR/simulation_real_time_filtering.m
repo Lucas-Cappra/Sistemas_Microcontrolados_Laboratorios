@@ -46,6 +46,8 @@ a = [1 1 0 0];
 M = 16;
 h = firpm (M, f, a);
 
+h_int = round(h*2^15);
+
 
 
 
@@ -63,17 +65,17 @@ xlabel('Tempo (s)');
 ylabel('Amplitude (V)');
 grid on;
 % xlim([0 5]);            % Mostra uma janela deslizante de 5 segundos na tela
-ylim([-1.1 1.1]);       % Limites de amplitude do sinal composto
+ylim([-1.8 1.8]);       % Limites de amplitude do sinal composto
 
 
 subplot(2,1,2);
-hPlot2 = plot(NaN, NaN, 'r', 'LineWidth', 2.0);
+hPlot2 = plot(NaN, NaN, 'g', 'LineWidth', 2.0);
 title('Sinal Sendo Amostrado em Tempo Real');
 xlabel('Tempo (s)');
 ylabel('Amplitude (V)');
 grid on;
 % xlim([0 5]);            % Mostra uma janela deslizante de 5 segundos na tela
-ylim([-1.1 1.1]);       % Limites de amplitude do sinal composto
+ylim([-1.8 1.8]);       % Limites de amplitude do sinal composto
 
 
 
@@ -87,23 +89,32 @@ while tempo_decorrido < t_fim
     w2 = sin(2 * pi * f_2 * tempo_decorrido);
     x(end+1) = w1 + w2;
     
-
+    x_int = round(x*1023/max(x));
     %Sinal final modulado sem multiplicador
-    y = filter(h, 1, x);
-
+    y = filter(h_int, 1, x_int);
+    
+    y = bitshift(y, -15, 'int64');
+    
+    y = y/4;
+    
+    
+    y = 8*y/1023;
+    
+    
+    
     set(hPlot1, 'XData', t, 'YData', x);
+    if tempo_decorrido > 0.2
+             xlim([tempo_decorrido - 0.2, tempo_decorrido]);
+    end
+
+    
     set(hPlot2, 'XData', t, 'YData', y);
     
     if tempo_decorrido > 0.2
              xlim([tempo_decorrido - 0.2, tempo_decorrido]);
     end
 
-    title('Sinal Senoidal');
-
-    xlabel('t (s)');
-
-
+    title('Sinal Filtrado');
+    
     drawnow;
-
-    grid on;
 end
