@@ -121,7 +121,7 @@ int main(void) {
 	// Ativa o modo CTC (WGM12 = 1)
 	TCCR1B |= (1 << WGM12);
 
-	// Configura o Prescaler para 1024 (CS12 = 1 e CS10 = 1)
+	// Configura o Prescaler para 64 (CS11 = 1 e CS10 = 1)
 	TCCR1B |= (0 << CS12) | (1 << CS11) | (1 << CS10);
 
 	// Ativa a interrupção por comparação do Timer 1
@@ -137,16 +137,25 @@ int main(void) {
 		if (flag_amostragem == 1){
 			
 			x[position_k] = ler_adc(0);
-			position_k++; // Avança o ponteiro do círculo para a PRÓXIMA amostragem
+			position_k++; // Avança o ponteiro do círculo para a proxima amostra
 
+			// Realiza a filtragem por convolução
 			y_k = convolution(Filtro, x, position_k);
 	        
+			// Lógica do ponteiro circular
 			if (position_k > M - 1) {
 				position_k = 0;
 			}
 			
+			
+			// Deslocamento de 15 bits pra direita/Divisao por 2^15, pra compensar o filtro int
 			y_k = y_k>>15;
+			
+			// Divisão por 4 pra se encaixar na faixa de 0 a 1023
 			y_k =  (y_k>>2) - 1;
+			
+			
+			// Coloca o y_k diretamente na saída do conversor DA R-2R
 			PORTC = ((y_k & 0x03) << 4);
 			PORTB = ((y_k >> 2) & 0x3F);
 			
