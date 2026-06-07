@@ -1,0 +1,49 @@
+interactive_dds();
+
+
+function interactive_dds()
+    % Configuração Inicial
+    F_s = 10000;
+    N = 256;
+    fase = linspace(0, 2*pi-0.001, N);
+    senoide = round(127.5 + 127.5 * sin(fase));
+    
+    % Simulação
+    freq_desejada = 100;
+    inc_32 = uint32((freq_desejada * 2^32) / F_s);
+    limite_32 = uint32(2^32);
+    
+    % Figura
+    fig = figure('Name', 'SDR DDS Interativo', 'NumberTitle', 'off');
+    ax = axes('Parent', fig, 'Position', [0.1 0.3 0.8 0.6]);
+    hPlot = plot(ax, zeros(1, 200), 'LineWidth', 2);
+    ylim([-10 270]); grid on;
+    
+    % Função de atualização do gráfico
+    function update_plot()
+        acumulador = uint32(0);
+        saida = zeros(1, 200);
+        for i = 1:200
+            acumulador = mod(acumulador + inc_32, limite_32);
+            idx = bitshift(acumulador, -24) + 1;
+            saida(i) = senoide(idx);
+        end
+        set(hPlot, 'YData', saida);
+        title(['Frequência: ' num2str(freq_desejada) ' Hz']);
+    end
+    
+    % Botões
+    uicontrol('Style', 'pushbutton', 'String', 'UP (+10Hz)', ...
+        'Position', [400 50 100 40], 'Callback', @(src,event)change_freq(10));
+    uicontrol('Style', 'pushbutton', 'String', 'DOWN (-10Hz)', ...
+        'Position', [100 50 100 40], 'Callback', @(src,event)change_freq(-10));
+    
+    % Função de callback dos botões
+    function change_freq(delta)
+        freq_desejada = max(10, freq_desejada + delta); % Limite min 10Hz
+        inc_32 = uint32((freq_desejada * 2^32) / F_s);
+        update_plot();
+    end
+    
+    update_plot();
+end
