@@ -333,7 +333,7 @@ int main(void)
 			// Deslocamento de 15 bits pra direita/Divisao por 2^15, pra compensar o filtro int
 			y_k = y_k>>15;
 	
-			// Divisão por 4 pra se encaixar na faixa de 0 a 1023
+			// Divisão por 4 pra se encaixar na faixa de 0 a 255
 			y_k =  (y_k>>2) - 1;
 	
 	
