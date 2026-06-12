@@ -1,9 +1,10 @@
 #include <avr/io.h>
 #include <util/delay.h>
-#include<avr/interrupt.h>;
+#include <avr/interrupt.h>
 #include <stdlib.h>
+#include "lcd.h"
+#include "lcd.c"
 
-#include "LCD.h"
 
 // =====================================================
 // DEFINICOES
@@ -133,7 +134,7 @@ int16_t x[FIR_ORDER];
 uint8_t position_k;
 
 
-int32_t convolution(int16_t Filter[], int16_t Signal[], uint8_t k){
+int32_t convolution(volatile int16_t Filter[], int16_t Signal[], uint8_t k){
 	
 	int32_t conv = 0;
 	for (uint8_t i = 0; i <FIR_ORDER ; i++){
@@ -166,7 +167,7 @@ ISR(TIMER1_COMPA_vect) {
 
 void buttons_init(void) {
 	DDRC &= ~((1 << DDC1) | (1 << DDC2) | (1 << DDC3));
-	PORTC |= (1 << PORTC1) | (1 << PORTC2) | (1 << PORTC3);
+	//PORTC |= (1 << PORTC1) | (1 << PORTC2) | (1 << PORTC3);
 	PCICR |= (1 << PCIE1);
 	PCMSK1 |= (1 << PCINT9) | (1 << PCINT10) | (1 << PCINT11);
 }
@@ -183,7 +184,7 @@ ISR(PCINT1_vect)
 
 	if(!(PINC & (1 << BTN_MODE)))
 	{
-		//_delay_ms(1);
+		_delay_ms(1);
 
 		if(!(PINC & (1 << BTN_MODE)))
 		{
@@ -206,7 +207,7 @@ ISR(PCINT1_vect)
 
 	if(!(PINC & (1 << BTN_UP)))
 	{
-		//_delay_ms(1);
+		_delay_ms(1);
 
 		if(!(PINC & (1 << BTN_UP)))
 		{
@@ -224,7 +225,7 @@ ISR(PCINT1_vect)
 
 	if(!(PINC & (1 << BTN_DOWN)))
 	{
-		//_delay_ms(1);
+		_delay_ms(1);
 
 		if(!(PINC & (1 << BTN_DOWN)))
 		{
@@ -298,9 +299,6 @@ int main(void)
 	lcd_xy(3,1);
 	lcd_str("FILTRO FIR");
 
-	_delay_ms(2000);
-	
-	buttons_init();
 	
 	sei();
 	update_display = 1;
@@ -318,6 +316,7 @@ int main(void)
 		
 		if (flag_amostragem == 1){
 	
+			
 			x[position_k] = ler_adc(0);
 			position_k++; // Avança o ponteiro do círculo para a proxima amostra
 
@@ -328,6 +327,7 @@ int main(void)
 			if (position_k > FIR_ORDER - 1) {
 				position_k = 0;
 			}
+			
 	
 	
 			// Deslocamento de 15 bits pra direita/Divisao por 2^15, pra compensar o filtro int
@@ -336,6 +336,7 @@ int main(void)
 			// Divisão por 4 pra se encaixar na faixa de 0 a 255
 			y_k =  (y_k>>2) - 1;
 	
+		
 	
 			// Coloca o y_k diretamente na saída do conversor DA R-2R
 			PORTC = ((y_k & 0x03) << 4);
