@@ -16,12 +16,12 @@ senoide  = round(senoide);
 % senoide = 5*senoide/max(senoide);
 
 
-freq_desejada = 100; % Frequência da portadora em Hz
+f_c = 100; % Frequência da portadora em Hz
 
 % O "incremento" é um valor que, somado N_lut vezes em 1 segundo, 
 % deve completar (F_s) ciclos.
 % Fórmula: Inc = (f_desejada * 2^32) / F_s
-inc_32 = uint32((freq_desejada * 2^32) / F_s);
+inc_32 = uint32((f_c * 2^32) / F_s);
 
 % Simulando o acumulador
 M = 2000; % Vamos simular 1000 instantes de tempo
@@ -33,7 +33,7 @@ limite_32 = uint32(2^32);
 t = (0:M-1)*T_s;
 % Mensagem a ser modulada AM
 f_m = 5;
-m_t = 1*sin(2*pi*5*t);
+m_t = 1*sin(2*pi*5*t)+0.5;
 m_AM = zeros(M, 1);
 
 
@@ -51,7 +51,7 @@ end
 % Plotar
 figure;
 plot(t, m_AM, 'LineWidth', 2);
-title(['Sinal Modulado AM - Freq: ' num2str(freq_desejada) 'Hz']);
+title(['Sinal Modulado AM - Freq: ' num2str(f_c) 'Hz']);
 grid on;
 
 
@@ -61,7 +61,8 @@ k_f = 100;
 
 for i = 1:M
     % 1. O acumulador avança (simulando o estouro natural do uint32)
-    acumulador = mod(acumulador + inc_32 + k_f*sum(m_t(1:i)), limite_32);
+    inc_32 = uint32(((f_c + k_f*m_t(i)) * 2^32) / F_s);
+    acumulador = mod(acumulador + inc_32, limite_32);
     
     % Agora, como o acumulador sempre é < 2^32, o bitshift funcionará perfeitamente
     indice = bitshift(acumulador, -24) + 1;
