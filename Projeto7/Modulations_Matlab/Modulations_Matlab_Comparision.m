@@ -11,7 +11,7 @@ fase = linspace(0, 2*pi-0.001, N);
 % Cria a senoide centrada em 127.5, variando de 0 a 255
 senoide = 127.5 + 127.5 * sin(fase);
 
-senoide  = round(senoide);
+senoide  = ceil(senoide);
 
 % senoide = 5*senoide/max(senoide);
 
@@ -24,7 +24,7 @@ f_c = 100; % Frequência da portadora em Hz
 inc_32 = uint32((f_c * 2^32) / F_s);
 
 % Simulando o acumulador
-M = 2000; % Vamos simular 1000 instantes de tempo
+M = 3000; % Vamos simular 1000 instantes de tempo
 acumulador = uint32(0);
 saida_seno = zeros(1, M);
 
@@ -33,7 +33,8 @@ limite_32 = uint32(2^32);
 t = (0:M-1)*T_s;
 % Mensagem a ser modulada AM
 f_m = 5;
-m_t = 1*sin(2*pi*5*t)+0.5;
+m_t = 0.5*sin(2*pi*5*t) + 0.5;
+
 m_AM = zeros(M, 1);
 
 
@@ -48,9 +49,12 @@ for i = 1:M
     m_AM(i) = senoide(indice)*m_t(i);
 end
 
+m_AM = m_AM/256;
+
 % Plotar
 figure;
-plot(t, m_AM, 'LineWidth', 2);
+plot(t, m_AM, 'LineWidth', 4); hold on;
+plot(t, m_t, 'LineWidth', 2, 'color', 'r');
 title(['Sinal Modulado AM - Freq: ' num2str(f_c) 'Hz']);
 grid on;
 
@@ -71,7 +75,10 @@ for i = 1:M
 end
 
 % Plotar
+m_FM = m_FM/256;
+
 figure;
-plot(t, m_FM, 'LineWidth', 2);
+plot(t, m_FM, 'LineWidth', 4); hold on;
+plot(t, m_t, 'LineWidth', 2, 'color', 'r');
 title('Sinal Modulado FM ');
 grid on;
