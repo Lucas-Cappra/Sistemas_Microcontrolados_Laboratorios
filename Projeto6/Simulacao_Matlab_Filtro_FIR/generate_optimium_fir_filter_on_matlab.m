@@ -38,6 +38,34 @@ a = [1 1 0 0];
 M = 16;
 h = firpm (M, f, a);
 
+
+N = 1024;
+f = (-N/2:N/2-1) * (Fs / N); % Frequências
+H_f = abs(fftshift(fft(h, N)));
+
+Fontesize = 15;
+
+% Plot do espectro de magnitude
+figure;
+subplot(2, 1, 1);
+plot(f, 20*log10(abs(H_f)), 'color', 'blue','linewidth',3);
+title('Espectro de Magnitude do Filtro Projetado');
+xlabel('f (Hz)');
+ylabel('|H(f)|');
+ax = gca;
+ax.FontSize = Fontesize;
+grid on;
+
+subplot(2, 1, 2);
+plot(f, (angle(H_f)), 'color', 'm','linewidth',3);
+title('Espectro de Fase do Filtro Projetado');
+xlabel('f (Hz)');
+ylabel('\phi(H(f))');
+ax = gca;
+ax.FontSize = Fontesize;
+grid on;
+%%
+
 %Sinal final modulado sem multiplicador
 y = filter(h,1,x);
 
