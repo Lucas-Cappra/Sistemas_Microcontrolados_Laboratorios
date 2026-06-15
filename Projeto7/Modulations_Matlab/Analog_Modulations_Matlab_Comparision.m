@@ -33,7 +33,7 @@ limite_32 = uint32(2^32);
 t = (0:M-1)*T_s;
 % Mensagem a ser modulada AM
 f_m = 5;
-m_t = 0.5*sin(2*pi*5*t) + 0.5;
+m_t = 2*sin(2*pi*5*t) + 2;
 
 m_AM = zeros(M, 1);
 
@@ -46,7 +46,7 @@ for i = 1:M
     % Agora, como o acumulador sempre é < 2^32, o bitshift funcionará perfeitamente
     indice = bitshift(acumulador, -24) + 1;
     
-    m_AM(i) = senoide(indice)*m_t(i);
+    m_AM(i) = (senoide(indice) - 127)*(m_t(i) - 2.5) + 127;
 end
 
 m_AM = m_AM/256;
