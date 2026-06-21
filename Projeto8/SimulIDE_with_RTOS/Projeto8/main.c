@@ -14,7 +14,7 @@ void vApplicationIdleHook( void ) {
 }
 
 
-// Vari·veis Globais
+// Vari√°veis Globais
 const uint32_t F_s = 10000;
 uint16_t i = 0;
 
@@ -47,7 +47,7 @@ const uint8_t senoide[256] = {
 	81, 84, 87, 90, 93, 96, 99, 102, 105, 109, 112, 115, 118, 121, 124, 127
 };
 
-// Mapeamento dos Botıes
+// Mapeamento dos Bot√µes
 #define BTN_M     PC0
 #define BTN_UP    PC1
 #define BTN_DOWN  PC2
@@ -56,7 +56,7 @@ const uint8_t senoide[256] = {
 typedef enum { QUADRADA = 0, TRIANGULAR, RAMPA, SENOIDE } WaveType;
 typedef enum { SEL_ONDA = 0, SEL_DUTY, SEL_FREQ, SEL_VPP, SEL_OFFSET } Parametro;
 
-// Vari·veis de Controle do Sinal
+// Vari√°veis de Controle do Sinal
 volatile WaveType tipo_onda = SENOIDE;
 volatile uint8_t duty = 50;
 volatile uint16_t frequencia = 100;
@@ -66,22 +66,22 @@ volatile uint8_t saida = 1;
 volatile Parametro parametro = SEL_ONDA;
 volatile uint8_t update_display = 1;
 
-// ProtÛtipos das Tasks do FreeRTOS
+// Prot√≥tipos das Tasks do FreeRTOS
 void vTaskLCD(void *pvParameters);
 void vTaskButtons(void *pvParameters);
 
 void buttons_init(void) {
-	// ConfiguraÁ„o dos Botıes
+	// Configura√ß√£o dos Bot√µes
 	DDRC &= ~((1<<BTN_M) | (1<<BTN_UP) | (1<<BTN_DOWN) | (1<<BTN_A));
 	PORTC |= (1<<BTN_M) | (1<<BTN_UP) | (1<<BTN_DOWN) | (1<<BTN_A);
 }
 
 static inline void dac_write(uint8_t val) {
-	PORTC = (PORTC & 0xCF) | ((val & 0x03) << 4); // Preserva os outros pinos de PORTC (botıes)
+	PORTC = (PORTC & 0xCF) | ((val & 0x03) << 4); // Preserva os outros pinos de PORTC (bot√µes)
 	PORTB = val >> 2;
 }
 
-// GeraÁ„o de sinal otimizada para rodar dentro da ISR de 10kHz
+// Gera√ß√£o de sinal otimizada para rodar dentro da ISR de 10kHz
 void processar_gerador(void) {
 	if (!saida) {
 		dac_write(0);
@@ -90,6 +90,7 @@ void processar_gerador(void) {
 
 	uint8_t saida_DAC = 0;
 	uint16_t N = F_s / frequencia;
+	uint16_t M = (duty * N) / 100;
 	int8_t pm = 0;
 	
 	if (tipo_onda == SENOIDE) {
@@ -105,13 +106,12 @@ void processar_gerador(void) {
 		saida_DAC = ((uint16_t)rampa_pura * vpp) / 50;
 	}
 	else if (tipo_onda == QUADRADA) {
-		uint16_t M = (duty * N) / 100;
 		if (i >= N - 1) i = 0;
 		saida_DAC = (i < M) ? (256 * vpp / 50) : 0;
 		i++;
 	}
 	else if (tipo_onda == TRIANGULAR) {
-		uint16_t M = N / 2;
+		
 		sinal.inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
 		sinal.inc = (sinal.inc >> 24);
 		pm = (i >= M) ? -1 : 1;
@@ -132,14 +132,14 @@ ISR(TIMER2_COMPA_vect) {
 	processar_gerador();
 }
 
-// Substitua a funÁ„o setup_timer por esta
+// Substitua a fun√ß√£o setup_timer por esta
 void setup_timer(void) {
 	// Zera os registradores de controle do Timer 2
 	TCCR2A = 0;
 	TCCR2B = 0;
 	TCNT2  = 0;
 	
-	// Configura o valor de comparaÁ„o para estourar a exatos 10kHz
+	// Configura o valor de compara√ß√£o para estourar a exatos 10kHz
 	OCR2A  = 24;
 
 	// Ativa o modo CTC (Clear Timer on Compare Match) no Timer 2
@@ -148,7 +148,7 @@ void setup_timer(void) {
 	// Configura o Prescaler para 64 (CS22 = 1, CS21 = 0, CS20 = 0)
 	TCCR2B |= (1 << CS22);
 	
-	// Ativa a interrupÁ„o por comparaÁ„o do canal A
+	// Ativa a interrup√ß√£o por compara√ß√£o do canal A
 	TIMSK2 |= (1 << OCIE2A);
 }
 
@@ -172,9 +172,9 @@ int main(void) {
 	lcd_str("MGS");
 	
 	setup_timer();
-	sei(); // Liga interrupÁıes globais
+	sei(); // Liga interrup√ß√µes globais
 
-	// CriaÁ„o das Tasks (Ajuste do tamanho da stack devido ‡ pouca RAM do ATmega)
+	// Cria√ß√£o das Tasks (Ajuste do tamanho da stack devido √† pouca RAM do ATmega)
 	xTaskCreate(vTaskLCD, "LCD", 120, NULL, 1, NULL);
 	xTaskCreate(vTaskButtons, "BTNS", 100, NULL, 2, NULL);
 
@@ -190,7 +190,7 @@ int main(void) {
 
 void vTaskLCD(void *pvParameters) {
 	char buffer[10];
-	// Aguarda os 2 segundos iniciais de splash screen de forma n„o-bloqueante
+	// Aguarda os 2 segundos iniciais de splash screen de forma n√£o-bloqueante
 	vTaskDelay(pdMS_TO_TICKS(2000));
 
 	for(;;) {
@@ -230,7 +230,7 @@ void vTaskLCD(void *pvParameters) {
 			buffer[0] = (offset / 10) + '0'; buffer[1] = '.'; buffer[2] = (offset % 10) + '0'; buffer[3] = '\0';
 			lcd_str(buffer);
 
-			// --- INDICADOR DE EDI«√O ---
+			// --- INDICADOR DE EDI√á√ÉO ---
 			switch(parametro) {
 				case SEL_ONDA:   lcd_xy(3, 0);  lcd_data('*'); break;
 				case SEL_DUTY:   lcd_xy(9, 0);  lcd_data('*'); break;
@@ -249,7 +249,7 @@ void vTaskButtons(void *pvParameters) {
 	uint8_t ultimo_estado_UP = 1, ultimo_estado_DOWN = 1;
 
 	for(;;) {
-		// --- Bot„o M ---
+		// --- Bot√£o M ---
 		if (!(PINC & (1 << BTN_M)) && ultimo_estado_M) {
 			parametro++;
 			if (parametro > SEL_OFFSET) parametro = SEL_ONDA;
@@ -259,7 +259,7 @@ void vTaskButtons(void *pvParameters) {
 			ultimo_estado_M = 1;
 		}
 
-		// --- Bot„o A ---
+		// --- Bot√£o A ---
 		if (!(PINC & (1 << BTN_A)) && ultimo_estado_A) {
 			saida = !saida;
 			update_display = 1;
@@ -268,7 +268,7 @@ void vTaskButtons(void *pvParameters) {
 			ultimo_estado_A = 1;
 		}
 
-		// --- Bot„o UP ---
+		// --- Bot√£o UP ---
 		if (!(PINC & (1 << BTN_UP)) && ultimo_estado_UP) {
 			switch(parametro) {
 				case SEL_ONDA:   if(tipo_onda < SENOIDE) tipo_onda++; break;
@@ -283,7 +283,7 @@ void vTaskButtons(void *pvParameters) {
 			ultimo_estado_UP = 1;
 		}
 
-		// --- Bot„o DOWN ---
+		// --- Bot√£o DOWN ---
 		if (!(PINC & (1 << BTN_DOWN)) && ultimo_estado_DOWN) {
 			switch(parametro) {
 				case SEL_ONDA:   if(tipo_onda > QUADRADA) tipo_onda--; break;
@@ -298,7 +298,7 @@ void vTaskButtons(void *pvParameters) {
 			ultimo_estado_DOWN = 1;
 		}
 
-		// Amostragem dos botıes a cada 30ms (faz o debounce nativo sem travar nada!)
+		// Amostragem dos bot√µes a cada 30ms (faz o debounce nativo sem travar nada!)
 		vTaskDelay(pdMS_TO_TICKS(30));
 	}
 }
