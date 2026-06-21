@@ -11,5 +11,5 @@ Este repositório contempla os códigos de todos os projetos desenvolvidos na di
 6. Filtro FIR
 7. SDR Modulador
 8. Gerador de Sinais
-9. 
-10. 
+9. Mini Indicador de Altitude
+10. Projeto Pessoal
