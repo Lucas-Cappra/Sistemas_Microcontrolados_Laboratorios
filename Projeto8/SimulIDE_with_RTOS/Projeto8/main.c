@@ -92,15 +92,15 @@ void processar_gerador(void) {
 	uint16_t N = F_s / frequencia;
 	uint16_t M = (duty * N) / 100;
 	int8_t pm = 0;
+	sinal.inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
 	
 	if (tipo_onda == SENOIDE) {
-		sinal.inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
+		
 		sinal.ponteiro_fase += sinal.inc;
 		uint8_t indice = (uint8_t)(sinal.ponteiro_fase >> 24);
 		saida_DAC = (vpp * senoide[indice]) / 50;
 	}
 	else if (tipo_onda == RAMPA) {
-		sinal.inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
 		sinal.ponteiro_fase += sinal.inc;
 		uint8_t rampa_pura = (uint8_t)(sinal.ponteiro_fase >> 24);
 		saida_DAC = ((uint16_t)rampa_pura * vpp) / 50;
@@ -112,7 +112,6 @@ void processar_gerador(void) {
 	}
 	else if (tipo_onda == TRIANGULAR) {
 		
-		sinal.inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
 		sinal.inc = (sinal.inc >> 24);
 		pm = (i >= M) ? -1 : 1;
 		sinal.ponteiro_fase += pm * sinal.inc;
