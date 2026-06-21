@@ -59,7 +59,7 @@ typedef enum { SEL_ONDA = 0, SEL_DUTY, SEL_FREQ, SEL_VPP, SEL_OFFSET } Parametro
 // Variáveis de Controle do Sinal
 volatile WaveType tipo_onda = SENOIDE;
 volatile uint8_t duty = 50;
-volatile uint16_t frequencia = 100;
+volatile uint16_t frequencia = 50;
 volatile uint8_t vpp = 20;
 volatile uint8_t offset = 25;
 volatile uint8_t saida = 1;
@@ -92,7 +92,7 @@ void processar_gerador(void) {
 	uint16_t N = F_s / frequencia;
 	uint16_t M = (duty * N) / 100;
 	int8_t pm = 0;
-	sinal.inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
+	
 	
 	if (tipo_onda == SENOIDE) {
 		
@@ -102,8 +102,8 @@ void processar_gerador(void) {
 	}
 	else if (tipo_onda == RAMPA) {
 		sinal.ponteiro_fase += sinal.inc;
-		uint8_t rampa_pura = (uint8_t)(sinal.ponteiro_fase >> 24);
-		saida_DAC = ((uint16_t)rampa_pura * vpp) / 50;
+		uint8_t amp_rampa = (uint8_t)(sinal.ponteiro_fase >> 24);
+		saida_DAC = ((uint16_t)amp_rampa* vpp) / 50;
 	}
 	else if (tipo_onda == QUADRADA) {
 		if (i >= N - 1) i = 0;
@@ -112,9 +112,10 @@ void processar_gerador(void) {
 	}
 	else if (tipo_onda == TRIANGULAR) {
 		
-		sinal.inc = (sinal.inc >> 24);
+		uint16_t amp_triangular = (uint8_t)(sinal.inc >> 24);
+		
 		pm = (i >= M) ? -1 : 1;
-		sinal.ponteiro_fase += pm * sinal.inc;
+		sinal.ponteiro_fase += pm * amp_triangular;
 		if (i >= N - 1) {
 			i = 0;
 			sinal.ponteiro_fase = 0;
@@ -144,8 +145,8 @@ void setup_timer(void) {
 	// Ativa o modo CTC (Clear Timer on Compare Match) no Timer 2
 	TCCR2A |= (1 << WGM21);
 	
-	// Configura o Prescaler para 64 (CS22 = 1, CS21 = 0, CS20 = 0)
-	TCCR2B |= (1 << CS22);
+	// Configura o Prescaler para 64 (CS22 = 0, CS21 = 0, CS20 = 0)
+	TCCR2B |= (1 << CS22) | (0 << CS21) | (0 << CS20);
 	
 	// Ativa a interrupção por comparação do canal A
 	TIMSK2 |= (1 << OCIE2A);
@@ -163,6 +164,8 @@ int main(void) {
 	setup_dac();
 	buttons_init();
 	lcd_init();
+	
+	sinal.inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
 	
 	lcd_clear();
 	lcd_xy(2, 0);
@@ -189,6 +192,7 @@ int main(void) {
 
 void vTaskLCD(void *pvParameters) {
 	char buffer[10];
+	
 	// Aguarda os 2 segundos iniciais de splash screen de forma não-bloqueante
 	vTaskDelay(pdMS_TO_TICKS(2000));
 
@@ -246,6 +250,8 @@ void vTaskLCD(void *pvParameters) {
 void vTaskButtons(void *pvParameters) {
 	uint8_t ultimo_estado_M = 1, ultimo_estado_A = 1;
 	uint8_t ultimo_estado_UP = 1, ultimo_estado_DOWN = 1;
+	
+	sinal.inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
 
 	for(;;) {
 		// --- Botão M ---
