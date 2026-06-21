@@ -393,60 +393,47 @@ static inline void dac_write(uint8_t val) {
 
 
 // Task do gerador de sinais
+void processar_gerador(void) {
 
-void task_gerador(volatile uint16_t frequencia, volatile signal *sinal){
+	sinal.inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
 
-	uint8_t saida_DAC;
-
-	uint16_t N = F_s/frequencia;
-	
+	uint8_t saida_DAC = 0;
+	uint16_t N = F_s / frequencia;
+	uint16_t M = (duty * N) / 100;
 	int8_t pm = 0;
 	
-	if (tipo_onda == SENOIDE){
-		sinal->inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
-		sinal->ponteiro_fase = sinal->ponteiro_fase + sinal->inc;
-		uint8_t indice = (uint8_t)(sinal->ponteiro_fase >> 24);
-		
-		saida_DAC = (vpp*senoide[indice])/50;
-	}
-
-	else if (tipo_onda == RAMPA){
-		sinal->inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
-		sinal->ponteiro_fase += sinal->inc;
-		uint8_t rampa_pura = (uint8_t)(sinal->ponteiro_fase >> 24);
-		saida_DAC = ((uint16_t)rampa_pura * vpp) / 50;
-	}
 	
-	else if ( tipo_onda == QUADRADA){
+	if (tipo_onda == SENOIDE) {
 		
-		uint16_t M = (duty*N)/100;
-		if(i >= N-1){
-		 	i = 0;
-		}
-		
-		saida_DAC = (i<M) ? 256*vpp/50 : 0;
+		sinal.ponteiro_fase += sinal.inc;
+		uint8_t indice = (uint8_t)(sinal.ponteiro_fase >> 24);
+		saida_DAC = (vpp * senoide[indice]) / 50;
+	}
+	else if (tipo_onda == RAMPA) {
+		sinal.ponteiro_fase += sinal.inc;
+		uint8_t amp_rampa = (uint8_t)(sinal.ponteiro_fase >> 24);
+		saida_DAC = ((uint16_t)amp_rampa* vpp) / 50;
+	}
+	else if (tipo_onda == QUADRADA) {
+		if (i >= N - 1) i = 0;
+		saida_DAC = (i < M) ? (256 * vpp / 50) : 0;
 		i++;
 	}
-	
-	else if ( tipo_onda == TRIANGULAR){
+	else if (tipo_onda == TRIANGULAR) {
 		
-		uint16_t M = N/2;
-		sinal->inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
-		sinal->inc = (sinal->inc >> 24);
+		uint16_t amp_triangular = (uint8_t)(sinal.inc >> 24);
+		
 		pm = (i >= M) ? -1 : 1;
-		sinal->ponteiro_fase = sinal->ponteiro_fase + pm*sinal->inc;
-		if(i >= N-1){
-			 i = 0;
-			 sinal->ponteiro_fase = 0;
+		sinal.ponteiro_fase += pm * amp_triangular;
+		if (i >= N - 1) {
+			i = 0;
+			sinal.ponteiro_fase = 0;
 		}
-		saida_DAC = sinal->ponteiro_fase;
+		saida_DAC = sinal.ponteiro_fase;
 		i++;
-		
 	}
 
-
-	dac_write(saida_DAC);
-
+	dac_write(saida_DAC+offset);
 }
 
 
@@ -518,7 +505,7 @@ int main(void)
 		lcd_task();
 
 		if (flag_amostragem == 1){
-			task_gerador(frequencia, &sinal);
+			processar_gerador();
 		}
 
 	}
