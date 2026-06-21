@@ -3,7 +3,6 @@
 #include <avr/io.h>
 #include <stdlib.h>
 
-// Includes do FreeRTOS
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -17,6 +16,7 @@ void vApplicationIdleHook( void ) {
 // Variáveis Globais
 const uint32_t F_s = 10000;
 uint16_t i = 0;
+
 
 typedef struct {
 	uint32_t ponteiro_fase;
@@ -56,7 +56,9 @@ const uint8_t senoide[256] = {
 typedef enum { QUADRADA = 0, TRIANGULAR, RAMPA, SENOIDE } WaveType;
 typedef enum { SEL_ONDA = 0, SEL_DUTY, SEL_FREQ, SEL_VPP, SEL_OFFSET } Parametro;
 
-// Variáveis de Controle do Sinal
+
+
+// Variáveis Globais de Controle do Sinal
 volatile WaveType tipo_onda = SENOIDE;
 volatile uint8_t duty = 50;
 volatile uint16_t frequencia = 50;
@@ -66,10 +68,14 @@ volatile uint8_t saida = 1;
 volatile Parametro parametro = SEL_ONDA;
 volatile uint8_t update_display = 1;
 
-// Protótipos das Tasks do FreeRTOS
+
+// Declaração das Tasks
 void vTaskLCD(void *pvParameters);
 void vTaskButtons(void *pvParameters);
 
+
+
+// Funções de Setup
 void buttons_init(void) {
 	// Configuração dos Botões
 	DDRC &= ~((1<<BTN_M) | (1<<BTN_UP) | (1<<BTN_DOWN) | (1<<BTN_A));
@@ -77,11 +83,11 @@ void buttons_init(void) {
 }
 
 static inline void dac_write(uint8_t val) {
-	PORTC = (PORTC & 0xCF) | ((val & 0x03) << 4); // Preserva os outros pinos de PORTC (botões)
+	PORTC = (PORTC & 0xCF) | ((val & 0x03) << 4);
 	PORTB = val >> 2;
 }
 
-// Geração de sinal otimizada para rodar dentro da ISR de 10kHz
+// Fuñção Geradora dos Sinais
 void processar_gerador(void) {
 	if (!saida) {
 		dac_write(0);
@@ -158,7 +164,7 @@ void setup_dac(void) {
 }
 
 // =====================================================
-// MAIN & FREE RTOS SCHEDULER
+// MAIN
 // =====================================================
 int main(void) {
 	setup_dac();
@@ -176,7 +182,7 @@ int main(void) {
 	setup_timer();
 	sei(); // Liga interrupções globais
 
-	// Criação das Tasks (Ajuste do tamanho da stack devido à pouca RAM do ATmega)
+	// Criação das Tasks
 	xTaskCreate(vTaskLCD, "LCD", 120, NULL, 1, NULL);
 	xTaskCreate(vTaskButtons, "BTNS", 100, NULL, 2, NULL);
 
@@ -187,13 +193,13 @@ int main(void) {
 }
 
 // =====================================================
-// TASKS IMPLEMENTATION
+// TASKS
 // =====================================================
 
 void vTaskLCD(void *pvParameters) {
 	char buffer[10];
 	
-	// Aguarda os 2 segundos iniciais de splash screen de forma não-bloqueante
+	// Aguarda os 2 segundos
 	vTaskDelay(pdMS_TO_TICKS(2000));
 
 	for(;;) {
@@ -303,7 +309,7 @@ void vTaskButtons(void *pvParameters) {
 			ultimo_estado_DOWN = 1;
 		}
 
-		// Amostragem dos botões a cada 30ms (faz o debounce nativo sem travar nada!)
+		// Amostragem dos botões a cada 30ms
 		vTaskDelay(pdMS_TO_TICKS(30));
 	}
 }
