@@ -13,7 +13,7 @@ void vApplicationIdleHook( void ) {
 }
 
 
-// Variáveis Globais
+// Vari�veis Globais
 const uint32_t F_s = 10000;
 uint16_t i = 0;
 
@@ -47,7 +47,7 @@ const uint8_t senoide[256] = {
 	81, 84, 87, 90, 93, 96, 99, 102, 105, 109, 112, 115, 118, 121, 124, 127
 };
 
-// Mapeamento dos Botões
+// Mapeamento dos Bot�es
 #define BTN_M     PC0
 #define BTN_UP    PC1
 #define BTN_DOWN  PC2
@@ -58,7 +58,7 @@ typedef enum { SEL_ONDA = 0, SEL_DUTY, SEL_FREQ, SEL_VPP, SEL_OFFSET } Parametro
 
 
 
-// Variáveis Globais de Controle do Sinal
+// Vari�veis Globais de Controle do Sinal
 volatile WaveType tipo_onda = SENOIDE;
 volatile uint8_t duty = 50;
 volatile uint16_t frequencia = 50;
@@ -68,16 +68,22 @@ volatile uint8_t saida = 1;
 volatile Parametro parametro = SEL_ONDA;
 volatile uint8_t update_display = 1;
 
+// Constantes do tempo de retrigger dos bot�es UP/DOWN
+#define PERIODO_LOOP_MS         30    // per�odo do loop principal da task (vTaskDelay no fim)
+#define LIMIAR_ACELERA_MS       5000  // tempo pressionado para come�ar a acelerar
+#define INTERVALO_REPEAT_LENTO  500   // ms entre repeti��es antes de acelerar
+#define INTERVALO_REPEAT_RAPIDO 100   // ms entre repeti��es depois de acelerar
 
-// Declaração das Tasks
+
+// Declara��o das Tasks
 void vTaskLCD(void *pvParameters);
 void vTaskButtons(void *pvParameters);
 
 
 
-// Funções de Setup
+// Fun��es de Setup
 void buttons_init(void) {
-	// Configuração dos Botões
+	// Configura��o dos Bot�es
 	DDRC &= ~((1<<BTN_M) | (1<<BTN_UP) | (1<<BTN_DOWN) | (1<<BTN_A));
 	PORTC |= (1<<BTN_M) | (1<<BTN_UP) | (1<<BTN_DOWN) | (1<<BTN_A);
 }
@@ -87,7 +93,7 @@ static inline void dac_write(uint8_t val) {
 	PORTB = val >> 2;
 }
 
-// Fuñção Geradora dos Sinais
+// Fu���o Geradora dos Sinais
 void processar_gerador(void) {
 	if (!saida) {
 		dac_write(0);
@@ -119,18 +125,18 @@ void processar_gerador(void) {
 	else if (tipo_onda == TRIANGULAR) {
 		
 		uint16_t amp_triangular = (uint8_t)(sinal.inc >> 24);
-		
-		pm = (i >= M) ? -1 : 1;
-		sinal.ponteiro_fase += pm * amp_triangular;
 		if (i >= N - 1) {
 			i = 0;
 			sinal.ponteiro_fase = 0;
 		}
+		pm = (i >= M) ? -1 : 1;
+		sinal.ponteiro_fase += pm * amp_triangular;
+
 		saida_DAC = sinal.ponteiro_fase;
 		i++;
 	}
 
-	dac_write(saida_DAC+offset);
+	dac_write(saida_DAC+(256*offset)/50);
 }
 
 // O Timer estoura estritamente a 10kHz e gera o sinal imediatamente
@@ -138,14 +144,14 @@ ISR(TIMER2_COMPA_vect) {
 	processar_gerador();
 }
 
-// Substitua a função setup_timer por esta
+// Substitua a fun��o setup_timer por esta
 void setup_timer(void) {
 	// Zera os registradores de controle do Timer 2
 	TCCR2A = 0;
 	TCCR2B = 0;
 	TCNT2  = 0;
 	
-	// Configura o valor de comparação para estourar a exatos 10kHz
+	// Configura o valor de compara��o para estourar a exatos 10kHz
 	OCR2A  = 24;
 
 	// Ativa o modo CTC (Clear Timer on Compare Match) no Timer 2
@@ -154,7 +160,7 @@ void setup_timer(void) {
 	// Configura o Prescaler para 64 (CS22 = 0, CS21 = 0, CS20 = 0)
 	TCCR2B |= (1 << CS22) | (0 << CS21) | (0 << CS20);
 	
-	// Ativa a interrupção por comparação do canal A
+	// Ativa a interrup��o por compara��o do canal A
 	TIMSK2 |= (1 << OCIE2A);
 }
 
@@ -180,11 +186,11 @@ int main(void) {
 	lcd_str("MGS");
 	
 	setup_timer();
-	sei(); // Liga interrupções globais
+	sei(); // Liga interrup��es globais
 
-	// Criação das Tasks
-	xTaskCreate(vTaskLCD, "LCD", 120, NULL, 1, NULL);
-	xTaskCreate(vTaskButtons, "BTNS", 100, NULL, 2, NULL);
+	// Cria��o das Tasks
+	xTaskCreate(vTaskLCD, "LCD", 120, NULL, 2, NULL);
+	xTaskCreate(vTaskButtons, "BTNS", 100, NULL, 3, NULL);
 
 	// Inicia o Escalonador do FreeRTOS
 	vTaskStartScheduler();
@@ -239,7 +245,7 @@ void vTaskLCD(void *pvParameters) {
 			buffer[0] = (offset / 10) + '0'; buffer[1] = '.'; buffer[2] = (offset % 10) + '0'; buffer[3] = '\0';
 			lcd_str(buffer);
 
-			// --- INDICADOR DE EDIÇÃO ---
+			// --- INDICADOR DE EDI��O ---
 			switch(parametro) {
 				case SEL_ONDA:   lcd_xy(3, 0);  lcd_data('*'); break;
 				case SEL_DUTY:   lcd_xy(9, 0);  lcd_data('*'); break;
@@ -255,12 +261,18 @@ void vTaskLCD(void *pvParameters) {
 
 void vTaskButtons(void *pvParameters) {
 	uint8_t ultimo_estado_M = 1, ultimo_estado_A = 1;
-	uint8_t ultimo_estado_UP = 1, ultimo_estado_DOWN = 1;
+
+	uint16_t tempo_pressionado_UP = 0;
+	uint16_t tempo_desde_repeat_UP = 0;
+
+	// --- Estado de auto-repeat do bot�o DOWN (mesma l�gica, espelhada) ---
+	uint16_t tempo_pressionado_DOWN = 0;
+	uint16_t tempo_desde_repeat_DOWN = 0;
 	
 	sinal.inc = (uint32_t)(((uint64_t)frequencia << 32) / F_s);
 
 	for(;;) {
-		// --- Botão M ---
+		// --- Bot�o M ---
 		if (!(PINC & (1 << BTN_M)) && ultimo_estado_M) {
 			parametro++;
 			if (parametro > SEL_OFFSET) parametro = SEL_ONDA;
@@ -270,7 +282,7 @@ void vTaskButtons(void *pvParameters) {
 			ultimo_estado_M = 1;
 		}
 
-		// --- Botão A ---
+		// --- Bot�o A ---
 		if (!(PINC & (1 << BTN_A)) && ultimo_estado_A) {
 			saida = !saida;
 			update_display = 1;
@@ -279,37 +291,61 @@ void vTaskButtons(void *pvParameters) {
 			ultimo_estado_A = 1;
 		}
 
-		// --- Botão UP ---
-		if (!(PINC & (1 << BTN_UP)) && ultimo_estado_UP) {
-			switch(parametro) {
-				case SEL_ONDA:   if(tipo_onda < SENOIDE) tipo_onda++; break;
-				case SEL_DUTY:   if(duty < 99) duty++; break;
-				case SEL_FREQ:   if(frequencia < 100) frequencia++; break;
-				case SEL_VPP:    if(vpp < 50) vpp++; break;
-				case SEL_OFFSET: if(offset < 50) offset++; break;
+		// --- Bot�o UP
+		if (!(PINC & (1 << BTN_UP))) {
+			// Bot�o pressionado neste instante.
+			tempo_pressionado_UP += PERIODO_LOOP_MS;
+			tempo_desde_repeat_UP += PERIODO_LOOP_MS;
+
+
+			uint16_t intervalo_atual_UP = (tempo_pressionado_UP >= LIMIAR_ACELERA_MS)
+			? INTERVALO_REPEAT_RAPIDO
+			: INTERVALO_REPEAT_LENTO;
+
+			if (tempo_desde_repeat_UP >= intervalo_atual_UP) {
+				switch(parametro) {
+					case SEL_ONDA:   if(tipo_onda < SENOIDE) tipo_onda++; break;
+					case SEL_DUTY:   if(duty < 99) duty++; break;
+					case SEL_FREQ:   if(frequencia < 100) frequencia++; break;
+					case SEL_VPP:    if(vpp < 50) vpp++; break;
+					case SEL_OFFSET: if(offset < 50) offset++; break;
+				}
+				update_display = 1;
+				tempo_desde_repeat_UP = 0; // s� zera o contador de intervalo,
+				// tempo_pressionado_UP continua contando
 			}
-			update_display = 1;
-			ultimo_estado_UP = 0;
-			} else if (PINC & (1 << BTN_UP)) {
-			ultimo_estado_UP = 1;
+			} else {
+			// Bot�o solto: reseta todo o estado de auto-repeat
+			tempo_pressionado_UP = 0;
+			tempo_desde_repeat_UP = 0;
 		}
 
-		// --- Botão DOWN ---
-		if (!(PINC & (1 << BTN_DOWN)) && ultimo_estado_DOWN) {
-			switch(parametro) {
-				case SEL_ONDA:   if(tipo_onda > QUADRADA) tipo_onda--; break;
-				case SEL_DUTY:   if(duty > 1) duty--; break;
-				case SEL_FREQ:   if(frequencia > 1) frequencia--; break;
-				case SEL_VPP:    if(vpp > 0) vpp--; break;
-				case SEL_OFFSET: if(offset > 0) offset--; break;
+		// --- Bot�o DOWN
+		if (!(PINC & (1 << BTN_DOWN))) {
+			tempo_pressionado_DOWN += PERIODO_LOOP_MS;
+			tempo_desde_repeat_DOWN += PERIODO_LOOP_MS;
+
+			uint16_t intervalo_atual_DOWN = (tempo_pressionado_DOWN >= LIMIAR_ACELERA_MS)
+			? INTERVALO_REPEAT_RAPIDO
+			: INTERVALO_REPEAT_LENTO;
+
+			if (tempo_desde_repeat_DOWN >= intervalo_atual_DOWN) {
+				switch(parametro) {
+					case SEL_ONDA:   if(tipo_onda > QUADRADA) tipo_onda--; break;
+					case SEL_DUTY:   if(duty > 1) duty--; break;
+					case SEL_FREQ:   if(frequencia > 1) frequencia--; break;
+					case SEL_VPP:    if(vpp > 0) vpp--; break;
+					case SEL_OFFSET: if(offset > 0) offset--; break;
+				}
+				update_display = 1;
+				tempo_desde_repeat_DOWN = 0;
 			}
-			update_display = 1;
-			ultimo_estado_DOWN = 0;
-			} else if (PINC & (1 << BTN_DOWN)) {
-			ultimo_estado_DOWN = 1;
+			} else {
+			tempo_pressionado_DOWN = 0;
+			tempo_desde_repeat_DOWN = 0;
 		}
 
-		// Amostragem dos botões a cada 30ms
-		vTaskDelay(pdMS_TO_TICKS(30));
+		// Pulling dos bot�es a cada 30ms
+		vTaskDelay(pdMS_TO_TICKS(PERIODO_LOOP_MS));
 	}
 }
